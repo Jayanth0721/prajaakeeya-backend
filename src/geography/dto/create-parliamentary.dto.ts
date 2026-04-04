@@ -1,0 +1,20 @@
+import { IsNotEmpty, IsString } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+
+export class CreateParliamentaryDto {
+  @ApiProperty({
+    description: 'Parliamentary constituency name',
+    example: 'Bangalore South'
+  })
+  @IsString()
+  @IsNotEmpty()
+  name!: string;
+
+  @ApiProperty({
+    description: 'State name',
+    example: 'Karnataka'
+  })
+  @IsString()
+  @IsNotEmpty()
+  state!: string;
+}
