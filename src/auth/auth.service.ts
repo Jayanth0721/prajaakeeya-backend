@@ -168,7 +168,6 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     if (user && (user.isSelfDeleted || (user.isBlocked && user.name === "Deleted User"))) {
       const reactivated = await this.usersService.reactivateAccount(email, {
         name: profile.name,
-        profilePicture: profile.picture,
         role: "voter",
       } as any);
       if (reactivated) user = reactivated;
@@ -176,7 +175,6 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       user = await this.usersService.create({
         email,
         name: profile.name || email.split("@")[0],
-        profilePicture: profile.picture,
         role: "voter",
       } as any);
     }
@@ -1058,8 +1056,6 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
       // Keep legacy fields for backward compatibility
       name: voter?.name_en || decodedToken.name,
       epicId: voter?.voter_epic,
-      // Add profile picture from Google if not provided
-      profilePicture: decodedToken.picture,
     };
 
     // Block duplicate EPIC registrations (skip if it's the same blocked user)
