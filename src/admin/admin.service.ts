@@ -1,27 +1,27 @@
-import { Injectable } from '@nestjs/common';
-import { WardsService } from '../wards/wards.service';
-import { VoterRollService } from '../voter-roll/voter-roll.service';
-import { AspirantsService } from '../aspirants/aspirants.service';
-import { VotesService } from '../votes/votes.service';
-import { ExtractionService } from '../extraction/extraction.service';
-import { UsersService } from '../users/users.service';
-import { ElectionsService } from '../elections/elections.service';
-import { ParliamentaryService } from '../geography/parliamentary.service';
-import { AssemblyService } from '../geography/assembly.service';
-import { MunicipalityService } from '../geography/municipality.service';
-import { CreateUserByEpicDto } from '../users/dto/create-user-by-epic.dto';
-import { UpdateUserDto } from '../users/dto/update-user.dto';
-import { CreateWardMeetingDto } from '../wards/dto/create-ward-meeting.dto';
-import { UpdateWardMeetingDto } from '../wards/dto/update-ward-meeting.dto';
-import { SetVotingWindowDto } from '../votes/dto/set-voting-window.dto';
-import { CreateElectionDto } from '../elections/dto/create-election.dto';
-import { UpdateElectionDto } from '../elections/dto/update-election.dto';
-import { CreateParliamentaryDto } from '../geography/dto/create-parliamentary.dto';
-import { CreateAssemblyDto } from '../geography/dto/create-assembly.dto';
-import { CreateMunicipalityDto } from '../geography/dto/create-municipality.dto';
-import { CreateWardDto } from '../wards/dto/create-ward.dto';
-import { GramaPanchayatService } from '../grama-panchayat/grama-panchayat.service';
-import { CreateGramaPanchayatDto } from '../grama-panchayat/dto/create-grama-panchayat.dto';
+import { Injectable } from "@nestjs/common";
+import { WardsService } from "../wards/wards.service";
+import { VoterRollService } from "../voter-roll/voter-roll.service";
+import { AspirantsService } from "../aspirants/aspirants.service";
+import { VotesService } from "../votes/votes.service";
+import { ExtractionService } from "../extraction/extraction.service";
+import { UsersService } from "../users/users.service";
+import { ElectionsService } from "../elections/elections.service";
+import { ParliamentaryService } from "../geography/parliamentary.service";
+import { AssemblyService } from "../geography/assembly.service";
+import { MunicipalityService } from "../geography/municipality.service";
+import { CreateUserByEpicDto } from "../users/dto/create-user-by-epic.dto";
+import { UpdateUserDto } from "../users/dto/update-user.dto";
+import { CreateWardMeetingDto } from "../wards/dto/create-ward-meeting.dto";
+import { UpdateWardMeetingDto } from "../wards/dto/update-ward-meeting.dto";
+import { SetVotingWindowDto } from "../votes/dto/set-voting-window.dto";
+import { CreateElectionDto } from "../elections/dto/create-election.dto";
+import { UpdateElectionDto } from "../elections/dto/update-election.dto";
+import { CreateParliamentaryDto } from "../geography/dto/create-parliamentary.dto";
+import { CreateAssemblyDto } from "../geography/dto/create-assembly.dto";
+import { CreateMunicipalityDto } from "../geography/dto/create-municipality.dto";
+import { CreateWardDto } from "../wards/dto/create-ward.dto";
+import { GramaPanchayatService } from "../grama-panchayat/grama-panchayat.service";
+import { CreateGramaPanchayatDto } from "../grama-panchayat/dto/create-grama-panchayat.dto";
 
 @Injectable()
 export class AdminService {
@@ -40,27 +40,28 @@ export class AdminService {
   ) {}
 
   async dashboard() {
-    const [wards, voterCounts, aspirants, votes, extractionQueue] = await Promise.all([
-      this.wardsService.findAll(),
-      this.voterRollService.wardCounts(),
-      this.aspirantsService.count(),
-      this.votesService.count(),
-      this.extractionService.getQueue()
-    ]);
+    const [wards, voterCounts, aspirants, votes, extractionQueue] =
+      await Promise.all([
+        this.wardsService.findAll(),
+        this.voterRollService.wardCounts(),
+        this.aspirantsService.count(),
+        this.votesService.count(),
+        this.extractionService.getQueue(),
+      ]);
 
     return {
       totals: {
         wards: wards.length,
         voters: voterCounts.reduce((acc, curr) => acc + curr.total, 0),
         aspirants,
-        votes
+        votes,
       },
       wardStats: voterCounts.map((count) => ({
         wardId: count.wardId,
         wardName: wards.find((w) => w.id === count.wardId)?.name,
-        total: count.total
+        total: count.total,
       })),
-      extractionQueue
+      extractionQueue,
     };
   }
 
@@ -74,11 +75,16 @@ export class AdminService {
 
   async updateReportStatus(
     id: number,
-    status: 'pending' | 'resolved' | 'rejected',
+    status: "pending" | "resolved" | "rejected",
     adminNotes?: string,
-    resolvedById?: number
+    resolvedById?: number,
   ) {
-    return this.usersService.updateReportStatus(id, status, adminNotes, resolvedById);
+    return this.usersService.updateReportStatus(
+      id,
+      status,
+      adminNotes,
+      resolvedById,
+    );
   }
 
   // User Management
@@ -144,15 +150,22 @@ export class AdminService {
     // Resolve ward list: either provided ward numbers or all wards
     let wardsList;
     if (wardNumbers) {
-      const numbers = wardNumbers.split(',').map((s) => s.trim()).filter(Boolean);
+      const numbers = wardNumbers
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
       // findByNumber will throw NotFoundException if a ward number is invalid
-      wardsList = await Promise.all(numbers.map((n) => this.wardsService.findByNumber(n)));
+      wardsList = await Promise.all(
+        numbers.map((n) => this.wardsService.findByNumber(n)),
+      );
     } else {
       wardsList = await this.wardsService.findAll();
     }
 
     const wardIds = wardsList.map((w) => w.id);
-    const registeredCounts = await this.usersService.voterCounts(wardIds.length ? wardIds : undefined);
+    const registeredCounts = await this.usersService.voterCounts(
+      wardIds.length ? wardIds : undefined,
+    );
     const regMap = new Map(registeredCounts.map((c) => [c.wardId, c.total]));
 
     return wardsList.map((w) => ({
@@ -237,7 +250,10 @@ export class AdminService {
     return this.gramaPanchayatService.create(dto);
   }
 
-  async updateGramaPanchayat(id: number, dto: Partial<CreateGramaPanchayatDto>) {
+  async updateGramaPanchayat(
+    id: number,
+    dto: Partial<CreateGramaPanchayatDto>,
+  ) {
     return this.gramaPanchayatService.update(id, dto);
   }
 

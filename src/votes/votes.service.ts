@@ -1,22 +1,30 @@
-import { Injectable, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Vote } from './vote.entity';
-import { VotingWindow } from './voting-window.entity';
-import { CastVoteDto } from './dto/cast-vote.dto';
-import { SetVotingWindowDto } from './dto/set-voting-window.dto';
-import { UsersService } from '../users/users.service';
-import { WardsService } from '../wards/wards.service';
-import { AspirantsService } from '../aspirants/aspirants.service';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Vote } from "./vote.entity";
+import { VotingWindow } from "./voting-window.entity";
+import { CastVoteDto } from "./dto/cast-vote.dto";
+import { SetVotingWindowDto } from "./dto/set-voting-window.dto";
+import { UsersService } from "../users/users.service";
+import { WardsService } from "../wards/wards.service";
+import { AspirantsService } from "../aspirants/aspirants.service";
 
 @Injectable()
 export class VotesService {
   constructor(
     @InjectRepository(Vote) private readonly repo: Repository<Vote>,
-    @InjectRepository(VotingWindow) private readonly votingWindowRepo: Repository<VotingWindow>,
+    @InjectRepository(VotingWindow)
+    private readonly votingWindowRepo: Repository<VotingWindow>,
     private readonly usersService: UsersService,
     private readonly wardsService: WardsService,
-    @Inject(forwardRef(() => AspirantsService)) private readonly aspirantsService: AspirantsService,
+    @Inject(forwardRef(() => AspirantsService))
+    private readonly aspirantsService: AspirantsService,
   ) {}
 
   async castVote(userId: number, dto: CastVoteDto) {
@@ -24,45 +32,55 @@ export class VotesService {
     await this.checkVotingWindow();
     const activeWindow = await this.getActiveVotingWindow();
     if (!activeWindow) {
-      throw new BadRequestException('No voting window is currently active');
+      throw new BadRequestException("No voting window is currently active");
     }
 
     // Per-user uniqueness within this voting window
-    const exists = await this.repo.findOne({ where: { userId, votingWindowId: activeWindow.id } });
-    if (exists) throw new BadRequestException('You have already voted in this voting window');
+    const exists = await this.repo.findOne({
+      where: { userId, votingWindowId: activeWindow.id },
+    });
+    if (exists)
+      throw new BadRequestException(
+        "You have already voted in this voting window",
+      );
 
     // Validate aspirant exists
     const aspirant = await this.aspirantsService.findOne(dto.aspirantId);
-    if (!aspirant) throw new NotFoundException('Aspirant not found');
-    if (aspirant.isActive === false) throw new BadRequestException('This aspirant has withdrawn candidacy and cannot receive votes');
+    if (!aspirant) throw new NotFoundException("Aspirant not found");
+    if (aspirant.isActive === false)
+      throw new BadRequestException(
+        "This aspirant has withdrawn candidacy and cannot receive votes",
+      );
 
     // Check if user has any interaction
     const hasInteracted = await this.usersService.hasAnyInteraction(userId);
     if (!hasInteracted) {
       throw new BadRequestException(
-        'You must interact (via chat, meeting, direct meet, or phone call) before voting'
+        "You must interact (via chat, meeting, direct meet, or phone call) before voting",
       );
     }
 
-    return this.repo.save(this.repo.create({
-      aspirantId: dto.aspirantId,
-      wardId: aspirant.wardId ?? undefined,
-      userId,
-      votingWindowId: activeWindow.id
-    }));
+    return this.repo.save(
+      this.repo.create({
+        aspirantId: dto.aspirantId,
+        wardId: aspirant.wardId ?? undefined,
+        userId,
+        votingWindowId: activeWindow.id,
+      }),
+    );
   }
 
   async wardResults(wardId: number) {
     return this.repo
-      .createQueryBuilder('vote')
-      .leftJoin('vote.aspirant', 'aspirant')
-      .select('vote.aspirantId', 'aspirantId')
-      .addSelect('aspirant.name', 'aspirantName')
-      .addSelect('COUNT(vote.id)', 'totalVotes')
-      .where('vote.wardId = :wardId', { wardId })
-      .groupBy('vote.aspirantId')
-      .addGroupBy('aspirant.name')
-      .orderBy('"totalVotes"', 'DESC')
+      .createQueryBuilder("vote")
+      .leftJoin("vote.aspirant", "aspirant")
+      .select("vote.aspirantId", "aspirantId")
+      .addSelect("aspirant.name", "aspirantName")
+      .addSelect("COUNT(vote.id)", "totalVotes")
+      .where("vote.wardId = :wardId", { wardId })
+      .groupBy("vote.aspirantId")
+      .addGroupBy("aspirant.name")
+      .orderBy('"totalVotes"', "DESC")
       .getRawMany();
   }
 
@@ -73,25 +91,31 @@ export class VotesService {
   async hasUserVotedInActiveWindow(userId: number): Promise<boolean> {
     const window = await this.getActiveVotingWindow();
     if (!window) return false;
-    const vote = await this.repo.findOne({ where: { userId, votingWindowId: window.id } });
+    const vote = await this.repo.findOne({
+      where: { userId, votingWindowId: window.id },
+    });
     return !!vote;
   }
 
-  async countByAspirantIds(aspirantIds: number[]): Promise<Record<number, number>> {
+  async countByAspirantIds(
+    aspirantIds: number[],
+  ): Promise<Record<number, number>> {
     if (!aspirantIds.length) return {};
 
     const activeWindow = await this.getActiveVotingWindow();
     const qb = this.repo
-      .createQueryBuilder('vote')
-      .select('vote.aspirantId', 'aspirantId')
-      .addSelect('COUNT(vote.id)', 'count')
-      .where('vote.aspirantId IN (:...aspirantIds)', { aspirantIds });
+      .createQueryBuilder("vote")
+      .select("vote.aspirantId", "aspirantId")
+      .addSelect("COUNT(vote.id)", "count")
+      .where("vote.aspirantId IN (:...aspirantIds)", { aspirantIds });
 
     if (activeWindow) {
-      qb.andWhere('vote.votingWindowId = :windowId', { windowId: activeWindow.id });
+      qb.andWhere("vote.votingWindowId = :windowId", {
+        windowId: activeWindow.id,
+      });
     }
 
-    const results = await qb.groupBy('vote.aspirantId').getRawMany();
+    const results = await qb.groupBy("vote.aspirantId").getRawMany();
     const map: Record<number, number> = {};
     for (const r of results) {
       map[Number(r.aspirantId)] = Number(r.count);
@@ -118,7 +142,7 @@ export class VotesService {
       endTime: new Date(dto.endTime),
       description: dto.description,
       electionId: dto.electionId,
-      isActive: true
+      isActive: true,
     });
 
     return this.votingWindowRepo.save(window);
@@ -127,15 +151,15 @@ export class VotesService {
   async getActiveVotingWindow() {
     return this.votingWindowRepo.findOne({
       where: { isActive: true },
-      relations: ['election'],
-      order: { createdAt: 'DESC' }
+      relations: ["election"],
+      order: { createdAt: "DESC" },
     });
   }
 
   async getAllVotingWindows() {
     return this.votingWindowRepo.find({
-      relations: ['election'],
-      order: { createdAt: 'DESC' }
+      relations: ["election"],
+      order: { createdAt: "DESC" },
     });
   }
 
@@ -152,15 +176,21 @@ export class VotesService {
     if (!allowed) {
       const window = await this.getActiveVotingWindow();
       if (!window) {
-        throw new BadRequestException('No voting window is currently active');
+        throw new BadRequestException("No voting window is currently active");
       }
-      
+
       const now = new Date();
       if (now < window.startTime) {
-        throw new BadRequestException({ message: 'Voting has not started yet.', startsAt: window.startTime.getTime() });
+        throw new BadRequestException({
+          message: "Voting has not started yet.",
+          startsAt: window.startTime.getTime(),
+        });
       }
       if (now > window.endTime) {
-        throw new BadRequestException({ message: 'Voting has ended.', closedAt: window.endTime.getTime() });
+        throw new BadRequestException({
+          message: "Voting has ended.",
+          closedAt: window.endTime.getTime(),
+        });
       }
     }
   }

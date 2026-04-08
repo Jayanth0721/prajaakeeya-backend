@@ -1,38 +1,38 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateGramaPanchayatDto {
-  @ApiProperty({ example: 'Karnataka' })
+  @ApiProperty({ example: "Karnataka" })
   @IsString()
   @IsNotEmpty()
   state!: string;
 
-  @ApiProperty({ example: 'Bagalkote' })
+  @ApiProperty({ example: "Bagalkote" })
   @IsString()
   @IsNotEmpty()
   district!: string;
 
-  @ApiProperty({ example: 'Badami' })
+  @ApiProperty({ example: "Badami" })
   @IsString()
   @IsNotEmpty()
   taluk!: string;
 
-  @ApiProperty({ example: 'Adagal' })
+  @ApiProperty({ example: "Adagal" })
   @IsString()
   @IsNotEmpty()
   gpName!: string;
 
-  @ApiProperty({ example: 'Adagal' })
+  @ApiProperty({ example: "Adagal" })
   @IsString()
   @IsNotEmpty()
   villageName!: string;
 
-  @ApiProperty({ example: '598748' })
+  @ApiProperty({ example: "598748" })
   @IsString()
   @IsNotEmpty()
   villageCode!: string;
 
-  @ApiPropertyOptional({ example: '5000' })
+  @ApiPropertyOptional({ example: "5000" })
   @IsString()
   @IsOptional()
   population?: string;

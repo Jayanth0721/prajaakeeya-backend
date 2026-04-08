@@ -1,7 +1,7 @@
-import { Column, Entity } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
+import { Column, Entity } from "typeorm";
+import { BaseEntity } from "../common/base.entity";
 
-@Entity('states')
+@Entity("states")
 export class State extends BaseEntity {
   @Column({ unique: true })
   name!: string;

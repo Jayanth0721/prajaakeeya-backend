@@ -1,23 +1,37 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Aspirant } from './aspirant.entity';
-import { AspirantMeeting } from './aspirant-meeting.entity';
-import { AspirantBooking } from './aspirant-booking.entity';
-import { AspirantVisit } from './aspirant-visit.entity';
-import { VisitResponse } from './visit-response.entity';
-import { MeetingResponse } from './meeting-response.entity';
-import { ActivityRating } from './activity-rating.entity';
-import { VotesModule } from '../votes/votes.module';
-import { AspirantsService } from './aspirants.service';
-import { AspirantsController } from './aspirants.controller';
-import { UsersModule } from '../users/users.module';
-import { WardsModule } from '../wards/wards.module';
-import { ElectionsModule } from '../elections/elections.module';
+import { Module, forwardRef } from "@nestjs/common";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { Aspirant } from "./aspirant.entity";
+import { AspirantMeeting } from "./aspirant-meeting.entity";
+import { AspirantBooking } from "./aspirant-booking.entity";
+import { AspirantVisit } from "./aspirant-visit.entity";
+import { VisitResponse } from "./visit-response.entity";
+import { MeetingResponse } from "./meeting-response.entity";
+import { ActivityRating } from "./activity-rating.entity";
+import { VotesModule } from "../votes/votes.module";
+import { AspirantsService } from "./aspirants.service";
+import { AspirantsController } from "./aspirants.controller";
+import { UsersModule } from "../users/users.module";
+import { WardsModule } from "../wards/wards.module";
+import { ElectionsModule } from "../elections/elections.module";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Aspirant, AspirantMeeting, AspirantBooking, AspirantVisit, VisitResponse, MeetingResponse, ActivityRating]), UsersModule, WardsModule, ElectionsModule, forwardRef(() => VotesModule)],
+  imports: [
+    TypeOrmModule.forFeature([
+      Aspirant,
+      AspirantMeeting,
+      AspirantBooking,
+      AspirantVisit,
+      VisitResponse,
+      MeetingResponse,
+      ActivityRating,
+    ]),
+    UsersModule,
+    WardsModule,
+    ElectionsModule,
+    forwardRef(() => VotesModule),
+  ],
   providers: [AspirantsService],
   controllers: [AspirantsController],
-  exports: [AspirantsService]
+  exports: [AspirantsService],
 })
 export class AspirantsModule {}

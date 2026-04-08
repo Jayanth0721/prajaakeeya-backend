@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class AddMediaUploadFeatures1739300000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -83,9 +83,15 @@ export class AddMediaUploadFeatures1739300000000 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Drop indexes
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_user_signed_documents_status";`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_user_signed_documents_user";`);
-    await queryRunner.query(`DROP INDEX IF EXISTS "idx_admin_documents_type_active";`);
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_user_signed_documents_status";`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_user_signed_documents_user";`,
+    );
+    await queryRunner.query(
+      `DROP INDEX IF EXISTS "idx_admin_documents_type_active";`,
+    );
 
     // Drop tables
     await queryRunner.query(`DROP TABLE IF EXISTS "user_signed_documents";`);

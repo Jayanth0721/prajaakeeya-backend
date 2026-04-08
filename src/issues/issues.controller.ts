@@ -1,113 +1,199 @@
-import { Body, Controller, Post, UseGuards, Get, Param, Patch, Delete, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { IssuesService } from './issues.service';
-import { CreateIssueDto } from './dto/create-issue.dto';
-import { UpdateIssueDto } from './dto/update-issue.dto';
-import { CreateHandRaiseDto } from './dto/create-hand-raise.dto';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
+import {
+  Body,
+  Controller,
+  Post,
+  UseGuards,
+  Get,
+  Param,
+  Patch,
+  Delete,
+  Query,
+} from "@nestjs/common";
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+} from "@nestjs/swagger";
+import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { IssuesService } from "./issues.service";
+import { CreateIssueDto } from "./dto/create-issue.dto";
+import { UpdateIssueDto } from "./dto/update-issue.dto";
+import { CreateHandRaiseDto } from "./dto/create-hand-raise.dto";
+import { CurrentUser } from "../common/decorators/current-user.decorator";
 
-@ApiTags('Ward Issues')
-@Controller('issues')
+@ApiTags("Ward Issues")
+@Controller("issues")
 export class IssuesController {
   constructor(private readonly service: IssuesService) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a civic issue for an election constituency' })
-  @ApiQuery({ name: 'electionId', required: true, type: Number, description: 'Election ID' })
-  @ApiQuery({ name: 'constituencyId', required: true, type: Number, description: 'Constituency ID (parliamentary/assembly/ward)' })
-  @ApiResponse({ status: 201, description: 'Issue created' })
+  @ApiOperation({
+    summary: "Create a civic issue for an election constituency",
+  })
+  @ApiQuery({
+    name: "electionId",
+    required: true,
+    type: Number,
+    description: "Election ID",
+  })
+  @ApiQuery({
+    name: "constituencyId",
+    required: true,
+    type: Number,
+    description: "Constituency ID (parliamentary/assembly/ward)",
+  })
+  @ApiResponse({ status: 201, description: "Issue created" })
   create(
     @CurrentUser() user: any,
-    @Query('electionId') electionId: string,
-    @Query('constituencyId') constituencyId: string,
-    @Body() dto: CreateIssueDto
+    @Query("electionId") electionId: string,
+    @Query("constituencyId") constituencyId: string,
+    @Body() dto: CreateIssueDto,
   ) {
-    return this.service.createIssue(user.id, Number(electionId), Number(constituencyId), dto);
+    return this.service.createIssue(
+      user.id,
+      Number(electionId),
+      Number(constituencyId),
+      dto,
+    );
   }
 
-  @Post('hand-raise')
+  @Post("hand-raise")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Hand-raise (toggle) for a category in an election constituency' })
-  @ApiQuery({ name: 'electionId', required: true, type: Number, description: 'Election ID' })
-  @ApiQuery({ name: 'constituencyId', required: true, type: Number, description: 'Constituency ID' })
-  @ApiResponse({ status: 200, description: 'Hand raise toggled' })
+  @ApiOperation({
+    summary: "Hand-raise (toggle) for a category in an election constituency",
+  })
+  @ApiQuery({
+    name: "electionId",
+    required: true,
+    type: Number,
+    description: "Election ID",
+  })
+  @ApiQuery({
+    name: "constituencyId",
+    required: true,
+    type: Number,
+    description: "Constituency ID",
+  })
+  @ApiResponse({ status: 200, description: "Hand raise toggled" })
   handRaise(
     @CurrentUser() user: any,
-    @Query('electionId') electionId: string,
-    @Query('constituencyId') constituencyId: string,
-    @Body() dto: CreateHandRaiseDto
+    @Query("electionId") electionId: string,
+    @Query("constituencyId") constituencyId: string,
+    @Body() dto: CreateHandRaiseDto,
   ) {
-    return this.service.createHandRaise(user.id, Number(electionId), Number(constituencyId), dto);
+    return this.service.createHandRaise(
+      user.id,
+      Number(electionId),
+      Number(constituencyId),
+      dto,
+    );
   }
 
-  @Get('categories')
-  @ApiOperation({ summary: 'Get supported issue categories' })
-  @ApiResponse({ status: 200, description: 'Categories returned' })
+  @Get("categories")
+  @ApiOperation({ summary: "Get supported issue categories" })
+  @ApiResponse({ status: 200, description: "Categories returned" })
   categories() {
     return this.service.getCategories();
   }
 
   @Get()
-  @ApiOperation({ summary: 'List issues for an election constituency' })
-  @ApiQuery({ name: 'electionId', required: true, type: Number, description: 'Election ID' })
-  @ApiQuery({ name: 'constituencyId', required: true, type: Number, description: 'Constituency ID' })
-  @ApiQuery({ name: 'userId', required: false, type: Number, description: 'If passed, each category includes isRaised (true/false) for this user' })
-  @ApiResponse({ status: 200, description: 'Issues returned' })
+  @ApiOperation({ summary: "List issues for an election constituency" })
+  @ApiQuery({
+    name: "electionId",
+    required: true,
+    type: Number,
+    description: "Election ID",
+  })
+  @ApiQuery({
+    name: "constituencyId",
+    required: true,
+    type: Number,
+    description: "Constituency ID",
+  })
+  @ApiQuery({
+    name: "userId",
+    required: false,
+    type: Number,
+    description:
+      "If passed, each category includes isRaised (true/false) for this user",
+  })
+  @ApiResponse({ status: 200, description: "Issues returned" })
   list(
-    @Query('electionId') electionId: string,
-    @Query('constituencyId') constituencyId: string,
-    @Query('userId') userId?: string
+    @Query("electionId") electionId: string,
+    @Query("constituencyId") constituencyId: string,
+    @Query("userId") userId?: string,
   ) {
-    return this.service.listIssues(Number(electionId), Number(constituencyId), userId ? Number(userId) : undefined);
+    return this.service.listIssues(
+      Number(electionId),
+      Number(constituencyId),
+      userId ? Number(userId) : undefined,
+    );
   }
 
-  @Get(':id')
-  @ApiOperation({ summary: 'Get a single issue by ID' })
-  @ApiParam({ name: 'id', type: 'number' })
-  @ApiQuery({ name: 'electionId', required: true, type: Number })
-  @ApiQuery({ name: 'constituencyId', required: true, type: Number })
+  @Get(":id")
+  @ApiOperation({ summary: "Get a single issue by ID" })
+  @ApiParam({ name: "id", type: "number" })
+  @ApiQuery({ name: "electionId", required: true, type: Number })
+  @ApiQuery({ name: "constituencyId", required: true, type: Number })
   getOne(
-    @Param('id') id: string,
-    @Query('electionId') electionId: string,
-    @Query('constituencyId') constituencyId: string
+    @Param("id") id: string,
+    @Query("electionId") electionId: string,
+    @Query("constituencyId") constituencyId: string,
   ) {
-    return this.service.getIssue(Number(electionId), Number(constituencyId), Number(id));
+    return this.service.getIssue(
+      Number(electionId),
+      Number(constituencyId),
+      Number(id),
+    );
   }
 
-  @Patch(':id')
+  @Patch(":id")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update an issue (owner or admin)' })
-  @ApiParam({ name: 'id', type: 'number' })
-  @ApiQuery({ name: 'electionId', required: true, type: Number })
-  @ApiQuery({ name: 'constituencyId', required: true, type: Number })
+  @ApiOperation({ summary: "Update an issue (owner or admin)" })
+  @ApiParam({ name: "id", type: "number" })
+  @ApiQuery({ name: "electionId", required: true, type: Number })
+  @ApiQuery({ name: "constituencyId", required: true, type: Number })
   update(
     @CurrentUser() user: any,
-    @Param('id') id: string,
-    @Query('electionId') electionId: string,
-    @Query('constituencyId') constituencyId: string,
-    @Body() dto: UpdateIssueDto
+    @Param("id") id: string,
+    @Query("electionId") electionId: string,
+    @Query("constituencyId") constituencyId: string,
+    @Body() dto: UpdateIssueDto,
   ) {
-    return this.service.updateIssue(user.id, Number(electionId), Number(constituencyId), Number(id), dto);
+    return this.service.updateIssue(
+      user.id,
+      Number(electionId),
+      Number(constituencyId),
+      Number(id),
+      dto,
+    );
   }
 
-  @Delete(':id')
+  @Delete(":id")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete an issue (owner or admin)' })
-  @ApiParam({ name: 'id', type: 'number' })
-  @ApiQuery({ name: 'electionId', required: true, type: Number })
-  @ApiQuery({ name: 'constituencyId', required: true, type: Number })
+  @ApiOperation({ summary: "Delete an issue (owner or admin)" })
+  @ApiParam({ name: "id", type: "number" })
+  @ApiQuery({ name: "electionId", required: true, type: Number })
+  @ApiQuery({ name: "constituencyId", required: true, type: Number })
   delete(
     @CurrentUser() user: any,
-    @Param('id') id: string,
-    @Query('electionId') electionId: string,
-    @Query('constituencyId') constituencyId: string
+    @Param("id") id: string,
+    @Query("electionId") electionId: string,
+    @Query("constituencyId") constituencyId: string,
   ) {
-    return this.service.deleteIssue(user.id, Number(electionId), Number(constituencyId), Number(id));
+    return this.service.deleteIssue(
+      user.id,
+      Number(electionId),
+      Number(constituencyId),
+      Number(id),
+    );
   }
 }

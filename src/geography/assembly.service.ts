@@ -1,8 +1,12 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Assembly } from './assembly.entity';
-import { CreateAssemblyDto } from './dto/create-assembly.dto';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Assembly } from "./assembly.entity";
+import { CreateAssemblyDto } from "./dto/create-assembly.dto";
 
 @Injectable()
 export class AssemblyService {
@@ -12,9 +16,11 @@ export class AssemblyService {
   ) {}
 
   async create(dto: CreateAssemblyDto) {
-    const existing = await this.assemblyRepo.findOne({ where: { name: dto.name } });
+    const existing = await this.assemblyRepo.findOne({
+      where: { name: dto.name },
+    });
     if (existing) {
-      throw new ConflictException('Assembly constituency already exists');
+      throw new ConflictException("Assembly constituency already exists");
     }
     const assembly = this.assemblyRepo.create(dto);
     return this.assemblyRepo.save(assembly);
@@ -24,16 +30,17 @@ export class AssemblyService {
     const where: any = {};
     if (state) where.state = state;
     if (parliamentary) where.parliamentary = parliamentary;
-    
-    return this.assemblyRepo.find({ 
+
+    return this.assemblyRepo.find({
       where: Object.keys(where).length > 0 ? where : undefined,
-      order: { name: 'ASC' } 
+      order: { name: "ASC" },
     });
   }
 
   async findOne(id: number) {
     const assembly = await this.assemblyRepo.findOne({ where: { id } });
-    if (!assembly) throw new NotFoundException('Assembly constituency not found');
+    if (!assembly)
+      throw new NotFoundException("Assembly constituency not found");
     return assembly;
   }
 
@@ -41,7 +48,8 @@ export class AssemblyService {
     const assembly = await this.findOne(id);
     if (dto.name !== undefined) assembly.name = dto.name;
     if (dto.state !== undefined) assembly.state = dto.state;
-    if (dto.parliamentary !== undefined) assembly.parliamentary = dto.parliamentary;
+    if (dto.parliamentary !== undefined)
+      assembly.parliamentary = dto.parliamentary;
     return this.assemblyRepo.save(assembly);
   }
 

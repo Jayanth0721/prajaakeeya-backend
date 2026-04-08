@@ -1,75 +1,89 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Issue } from './issue.entity';
-import { HandRaise } from './hand-raise.entity';
-import { ElectionsService } from '../elections/elections.service';
-import { WardsService } from '../wards/wards.service';
-import { UsersService } from '../users/users.service';
-import { CreateIssueDto } from './dto/create-issue.dto';
-import { UpdateIssueDto } from './dto/update-issue.dto';
-import { CreateHandRaiseDto } from './dto/create-hand-raise.dto';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  BadRequestException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Issue } from "./issue.entity";
+import { HandRaise } from "./hand-raise.entity";
+import { ElectionsService } from "../elections/elections.service";
+import { WardsService } from "../wards/wards.service";
+import { UsersService } from "../users/users.service";
+import { CreateIssueDto } from "./dto/create-issue.dto";
+import { UpdateIssueDto } from "./dto/update-issue.dto";
+import { CreateHandRaiseDto } from "./dto/create-hand-raise.dto";
 
 export const ISSUE_CATEGORIES = [
-  'Jobs issues',
-  'Health issues',
-  'Education issues',
-  'Roads issues',
-  'Water issues',
-  'Sewage issues',
-  'Garbage issues',
-  'Street Lights issues',
-  'Safety issues',
-  'Parks issues',
-  'Construction issues',
-  'Electricity issues',
-  'Environment issues',
-  'Government Services issues',
-  'Public Infrastructure issues',
-  
-  'others'
+  "Jobs issues",
+  "Health issues",
+  "Education issues",
+  "Roads issues",
+  "Water issues",
+  "Sewage issues",
+  "Garbage issues",
+  "Street Lights issues",
+  "Safety issues",
+  "Parks issues",
+  "Construction issues",
+  "Electricity issues",
+  "Environment issues",
+  "Government Services issues",
+  "Public Infrastructure issues",
+
+  "others",
 ];
 
 const CATEGORY_KANNADA: Record<string, string> = {
-  'Jobs issues': 'ಉದ್ಯೋಗ ಸಮಸ್ಯೆಗಳು',
-  'Health issues': 'ಆರೋಗ್ಯ ಸಮಸ್ಯೆಗಳು',
-  'Education issues': 'ಶಿಕ್ಷಣ ಸಮಸ್ಯೆಗಳು',
-  'Roads issues': 'ರಸ್ತೆ ಸಮಸ್ಯೆಗಳು',
-  'Water issues': 'ನೀರಿನ ಸಮಸ್ಯೆಗಳು',
-  'Sewage issues': 'ಒಳಚರಂಡಿ ಸಮಸ್ಯೆಗಳು',
-  'Garbage issues': 'ಕಸದ ಸಮಸ್ಯೆಗಳು',
-  'Street Lights issues': 'ಬೀದಿ ದೀಪಗಳ ಸಮಸ್ಯೆಗಳು',
-  'Safety issues': 'ಭದ್ರತಾ ಸಮಸ್ಯೆಗಳು',
-  'Parks issues': 'ಉದ್ಯಾನವನಗಳ ಸಮಸ್ಯೆಗಳು',
-  'Construction issues': 'ನಿರ್ಮಾಣ ಸಮಸ್ಯೆಗಳು',
-  'Electricity issues': 'ವಿದ್ಯುತ್ ಸಮಸ್ಯೆಗಳು',
-  'Environment issues': 'ಪರಿಸರ ಸಮಸ್ಯೆಗಳು',
-  'Government Services issues': 'ಸರ್ಕಾರಿ ಸೇವೆಗಳ ಸಮಸ್ಯೆಗಳು',
-  'Public Infrastructure issues': 'ಸಾರ್ವಜನಿಕ ಮೂಲಸೌಕರ್ಯ ಸಮಸ್ಯೆಗಳು',
-  'others': 'ಇತರೆ ಸಮಸ್ಯೆಗಳು',
+  "Jobs issues": "ಉದ್ಯೋಗ ಸಮಸ್ಯೆಗಳು",
+  "Health issues": "ಆರೋಗ್ಯ ಸಮಸ್ಯೆಗಳು",
+  "Education issues": "ಶಿಕ್ಷಣ ಸಮಸ್ಯೆಗಳು",
+  "Roads issues": "ರಸ್ತೆ ಸಮಸ್ಯೆಗಳು",
+  "Water issues": "ನೀರಿನ ಸಮಸ್ಯೆಗಳು",
+  "Sewage issues": "ಒಳಚರಂಡಿ ಸಮಸ್ಯೆಗಳು",
+  "Garbage issues": "ಕಸದ ಸಮಸ್ಯೆಗಳು",
+  "Street Lights issues": "ಬೀದಿ ದೀಪಗಳ ಸಮಸ್ಯೆಗಳು",
+  "Safety issues": "ಭದ್ರತಾ ಸಮಸ್ಯೆಗಳು",
+  "Parks issues": "ಉದ್ಯಾನವನಗಳ ಸಮಸ್ಯೆಗಳು",
+  "Construction issues": "ನಿರ್ಮಾಣ ಸಮಸ್ಯೆಗಳು",
+  "Electricity issues": "ವಿದ್ಯುತ್ ಸಮಸ್ಯೆಗಳು",
+  "Environment issues": "ಪರಿಸರ ಸಮಸ್ಯೆಗಳು",
+  "Government Services issues": "ಸರ್ಕಾರಿ ಸೇವೆಗಳ ಸಮಸ್ಯೆಗಳು",
+  "Public Infrastructure issues": "ಸಾರ್ವಜನಿಕ ಮೂಲಸೌಕರ್ಯ ಸಮಸ್ಯೆಗಳು",
+  others: "ಇತರೆ ಸಮಸ್ಯೆಗಳು",
 };
 
 @Injectable()
 export class IssuesService {
   constructor(
     @InjectRepository(Issue) private readonly repo: Repository<Issue>,
-    @InjectRepository(HandRaise) private readonly handRepo: Repository<HandRaise>,
+    @InjectRepository(HandRaise)
+    private readonly handRepo: Repository<HandRaise>,
     private readonly electionsService: ElectionsService,
     private readonly wardsService: WardsService,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
   ) {}
 
   /** Resolve wardId for municipal_corporation elections */
-  private async resolveWardId(electionId: number, constituencyId: number): Promise<number | undefined> {
+  private async resolveWardId(
+    electionId: number,
+    constituencyId: number,
+  ): Promise<number | undefined> {
     const election = await this.electionsService.findById(electionId);
-    if (election.type === 'municipal_corporation') {
+    if (election.type === "municipal_corporation") {
       await this.wardsService.findOne(constituencyId);
       return constituencyId;
     }
     return undefined;
   }
 
-  async createIssue(userId: number, electionId: number, constituencyId: number, dto: CreateIssueDto) {
+  async createIssue(
+    userId: number,
+    electionId: number,
+    constituencyId: number,
+    dto: CreateIssueDto,
+  ) {
     const wardId = await this.resolveWardId(electionId, constituencyId);
 
     const issue = this.repo.create({
@@ -78,36 +92,69 @@ export class IssuesService {
       wardId,
       createdById: userId,
       title: dto.title,
-      description: dto.description
+      description: dto.description,
     });
 
     return this.repo.save(issue);
   }
 
-  async listIssues(electionId: number, constituencyId: number, userId?: number) {
+  async listIssues(
+    electionId: number,
+    constituencyId: number,
+    userId?: number,
+  ) {
     // validate election exists
     await this.electionsService.findById(electionId);
 
     const issues = await this.repo.find({
       where: { electionId, constituencyId },
-      order: { createdAt: 'DESC' }
+      order: { createdAt: "DESC" },
     });
 
-    const categories = await this.getCategoryCounts(electionId, constituencyId, userId);
+    const categories = await this.getCategoryCounts(
+      electionId,
+      constituencyId,
+      userId,
+    );
 
     return { issues, categories };
   }
 
-  async getCategoryCounts(electionId: number, constituencyId: number, userId?: number) {
-    const results: { name: string; nameKn: string; count: number; isRaised?: boolean }[] = [];
+  async getCategoryCounts(
+    electionId: number,
+    constituencyId: number,
+    userId?: number,
+  ) {
+    const results: {
+      name: string;
+      nameKn: string;
+      count: number;
+      isRaised?: boolean;
+    }[] = [];
 
     for (const name of ISSUE_CATEGORIES) {
-      const count = await this.handRepo.count({ where: { electionId, constituencyId, category: name } });
-      const entry: { name: string; nameKn: string; count: number; isRaised?: boolean } = {
-        name, nameKn: CATEGORY_KANNADA[name] ?? name, count
+      const count = await this.handRepo.count({
+        where: { electionId, constituencyId, category: name },
+      });
+      const entry: {
+        name: string;
+        nameKn: string;
+        count: number;
+        isRaised?: boolean;
+      } = {
+        name,
+        nameKn: CATEGORY_KANNADA[name] ?? name,
+        count,
       };
       if (userId !== undefined) {
-        const raised = await this.handRepo.findOne({ where: { electionId, constituencyId, createdById: userId, category: name } });
+        const raised = await this.handRepo.findOne({
+          where: {
+            electionId,
+            constituencyId,
+            createdById: userId,
+            category: name,
+          },
+        });
         entry.isRaised = !!raised;
       }
       results.push(entry);
@@ -115,21 +162,35 @@ export class IssuesService {
 
     // include any other dynamic categories saved in DB that are not in the static list
     const otherRows = await this.handRepo
-      .createQueryBuilder('h')
-      .select('h.category', 'category')
-      .addSelect('COUNT(*)', 'cnt')
+      .createQueryBuilder("h")
+      .select("h.category", "category")
+      .addSelect("COUNT(*)", "cnt")
       .where('h."electionId" = :electionId', { electionId })
       .andWhere('h."constituencyId" = :constituencyId', { constituencyId })
-      .andWhere('h.category NOT IN (:...cats)', { cats: ISSUE_CATEGORIES })
-      .groupBy('h.category')
+      .andWhere("h.category NOT IN (:...cats)", { cats: ISSUE_CATEGORIES })
+      .groupBy("h.category")
       .getRawMany();
 
     for (const r of otherRows) {
-      const entry: { name: string; nameKn: string; count: number; isRaised?: boolean } = {
-        name: r.category, nameKn: CATEGORY_KANNADA[r.category] ?? r.category, count: Number(r.cnt)
+      const entry: {
+        name: string;
+        nameKn: string;
+        count: number;
+        isRaised?: boolean;
+      } = {
+        name: r.category,
+        nameKn: CATEGORY_KANNADA[r.category] ?? r.category,
+        count: Number(r.cnt),
       };
       if (userId !== undefined) {
-        const raised = await this.handRepo.findOne({ where: { electionId, constituencyId, createdById: userId, category: r.category } });
+        const raised = await this.handRepo.findOne({
+          where: {
+            electionId,
+            constituencyId,
+            createdById: userId,
+            category: r.category,
+          },
+        });
         entry.isRaised = !!raised;
       }
       results.push(entry);
@@ -138,28 +199,46 @@ export class IssuesService {
     return results;
   }
 
-  async createHandRaise(userId: number, electionId: number, constituencyId: number, dto: CreateHandRaiseDto) {
+  async createHandRaise(
+    userId: number,
+    electionId: number,
+    constituencyId: number,
+    dto: CreateHandRaiseDto,
+  ) {
     // validate election exists
     await this.electionsService.findById(electionId);
 
     const category = dto.category?.trim();
-    if (!category) throw new BadRequestException('Category is required');
+    if (!category) throw new BadRequestException("Category is required");
 
-    const matched = ISSUE_CATEGORIES.find((c) => c.toLowerCase() === category.toLowerCase());
+    const matched = ISSUE_CATEGORIES.find(
+      (c) => c.toLowerCase() === category.toLowerCase(),
+    );
     const catToUse = matched || category;
 
     const wardId = await this.resolveWardId(electionId, constituencyId);
 
     // toggle: if user already raised for this election+constituency+category, remove it
     const existing = await this.handRepo.findOne({
-      where: { electionId, constituencyId, createdById: userId, category: catToUse }
+      where: {
+        electionId,
+        constituencyId,
+        createdById: userId,
+        category: catToUse,
+      },
     });
     if (existing) {
       await this.handRepo.delete(existing.id);
       return { raised: false };
     }
 
-    const hr = this.handRepo.create({ electionId, constituencyId, wardId, createdById: userId, category: catToUse });
+    const hr = this.handRepo.create({
+      electionId,
+      constituencyId,
+      wardId,
+      createdById: userId,
+      category: catToUse,
+    });
     await this.handRepo.save(hr);
     return { raised: true };
   }
@@ -169,17 +248,26 @@ export class IssuesService {
   }
 
   async getIssue(electionId: number, constituencyId: number, id: number) {
-    const issue = await this.repo.findOne({ where: { id, electionId, constituencyId } });
-    if (!issue) throw new NotFoundException('Issue not found');
+    const issue = await this.repo.findOne({
+      where: { id, electionId, constituencyId },
+    });
+    if (!issue) throw new NotFoundException("Issue not found");
     return issue;
   }
 
-  async updateIssue(userId: number, electionId: number, constituencyId: number, id: number, dto: UpdateIssueDto) {
+  async updateIssue(
+    userId: number,
+    electionId: number,
+    constituencyId: number,
+    id: number,
+    dto: UpdateIssueDto,
+  ) {
     const issue = await this.getIssue(electionId, constituencyId, id);
     const user = await this.usersService.findById(userId);
     const isCreator = issue.createdById === userId;
-    const isAdmin = user && (user as any).role === 'admin';
-    if (!isCreator && !isAdmin) throw new ForbiddenException('Not authorized to update this issue');
+    const isAdmin = user && (user as any).role === "admin";
+    if (!isCreator && !isAdmin)
+      throw new ForbiddenException("Not authorized to update this issue");
 
     if (dto.title !== undefined) issue.title = dto.title;
     if (dto.description !== undefined) issue.description = dto.description;
@@ -188,12 +276,18 @@ export class IssuesService {
     return this.repo.save(issue);
   }
 
-  async deleteIssue(userId: number, electionId: number, constituencyId: number, id: number) {
+  async deleteIssue(
+    userId: number,
+    electionId: number,
+    constituencyId: number,
+    id: number,
+  ) {
     const issue = await this.getIssue(electionId, constituencyId, id);
     const user = await this.usersService.findById(userId);
     const isCreator = issue.createdById === userId;
-    const isAdmin = user && (user as any).role === 'admin';
-    if (!isCreator && !isAdmin) throw new ForbiddenException('Not authorized to delete this issue');
+    const isAdmin = user && (user as any).role === "admin";
+    if (!isCreator && !isAdmin)
+      throw new ForbiddenException("Not authorized to delete this issue");
 
     await this.repo.delete(id);
     return { deleted: 1 };

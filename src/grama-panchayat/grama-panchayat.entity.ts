@@ -1,28 +1,28 @@
-import { Entity, Column, PrimaryColumn } from 'typeorm';
+import { Entity, Column, PrimaryColumn } from "typeorm";
 
-@Entity('grama_panchayat')
+@Entity("grama_panchayat")
 export class GramaPanchayat {
-  @PrimaryColumn({ name: 'Sr.No', type: 'bigint' })
+  @PrimaryColumn({ name: "Sr.No", type: "bigint" })
   srNo!: number;
 
-  @Column({ name: 'State' })
+  @Column({ name: "State" })
   state!: string;
 
-  @Column({ name: 'District' })
+  @Column({ name: "District" })
   district!: string;
 
-  @Column({ name: 'Taluk' })
+  @Column({ name: "Taluk" })
   taluk!: string;
 
-  @Column({ name: 'GP Name' })
+  @Column({ name: "GP Name" })
   gpName!: string;
 
-  @Column({ name: 'Village Name' })
+  @Column({ name: "Village Name" })
   villageName!: string;
 
-  @Column({ name: 'Village Code' })
+  @Column({ name: "Village Code" })
   villageCode!: string;
 
-  @Column({ name: 'Population', nullable: true })
+  @Column({ name: "Population", nullable: true })
   population?: string;
 }

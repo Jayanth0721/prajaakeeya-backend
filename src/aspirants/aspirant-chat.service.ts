@@ -1,9 +1,13 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AspirantMessage } from './aspirant-message.entity';
-import { CreateAspirantMessageDto } from './dto/create-aspirant-message.dto';
-import { GetAspirantMessagesDto } from './dto/get-aspirant-messages.dto';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { AspirantMessage } from "./aspirant-message.entity";
+import { CreateAspirantMessageDto } from "./dto/create-aspirant-message.dto";
+import { GetAspirantMessagesDto } from "./dto/get-aspirant-messages.dto";
 
 @Injectable()
 export class AspirantChatService {
@@ -12,8 +16,16 @@ export class AspirantChatService {
     private readonly repo: Repository<AspirantMessage>,
   ) {}
 
-  async createMessage(userId: number, aspirantId: number, dto: CreateAspirantMessageDto) {
-    const message = this.repo.create({ content: dto.content, userId, aspirantId });
+  async createMessage(
+    userId: number,
+    aspirantId: number,
+    dto: CreateAspirantMessageDto,
+  ) {
+    const message = this.repo.create({
+      content: dto.content,
+      userId,
+      aspirantId,
+    });
     return this.repo.save(message);
   }
 
@@ -23,7 +35,7 @@ export class AspirantChatService {
 
     const [messages, total] = await this.repo.findAndCount({
       where: { aspirantId },
-      order: { createdAt: 'DESC' },
+      order: { createdAt: "DESC" },
       skip,
       take: limit,
     });
@@ -41,9 +53,10 @@ export class AspirantChatService {
 
   async deleteMessage(messageId: number, userId: number) {
     const message = await this.repo.findOne({ where: { id: messageId } });
-    if (!message) throw new NotFoundException('Message not found');
-    if (message.userId !== userId) throw new ForbiddenException('Can only delete your own messages');
+    if (!message) throw new NotFoundException("Message not found");
+    if (message.userId !== userId)
+      throw new ForbiddenException("Can only delete your own messages");
     await this.repo.remove(message);
-    return { message: 'Message deleted' };
+    return { message: "Message deleted" };
   }
 }

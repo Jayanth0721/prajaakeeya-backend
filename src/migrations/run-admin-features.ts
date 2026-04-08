@@ -1,16 +1,16 @@
-import { DataSource } from 'typeorm';
-import * as dotenv from 'dotenv';
+import { DataSource } from "typeorm";
+import * as dotenv from "dotenv";
 
 dotenv.config();
 
 async function run() {
   const dataSource = new DataSource({
-    type: 'postgres',
+    type: "postgres",
     url: process.env.DATABASE_URL,
   });
 
   await dataSource.initialize();
-  console.log('Database connected');
+  console.log("Database connected");
 
   const queryRunner = dataSource.createQueryRunner();
   await queryRunner.connect();
@@ -28,9 +28,9 @@ async function run() {
         ALTER TABLE users 
         ADD COLUMN "is_blocked" BOOLEAN DEFAULT false;
       `);
-      console.log('✓ Added is_blocked column to users table');
+      console.log("✓ Added is_blocked column to users table");
     } else {
-      console.log('✓ is_blocked column already exists in users table');
+      console.log("✓ is_blocked column already exists in users table");
     }
 
     // Create ward_meetings table
@@ -57,14 +57,14 @@ async function run() {
           CONSTRAINT fk_created_by FOREIGN KEY (created_by_id) REFERENCES users(id) ON DELETE CASCADE
         );
       `);
-      console.log('✓ Created ward_meetings table');
+      console.log("✓ Created ward_meetings table");
     } else {
-      console.log('✓ ward_meetings table already exists');
+      console.log("✓ ward_meetings table already exists");
     }
 
-    console.log('\n✓ Migration completed successfully!');
+    console.log("\n✓ Migration completed successfully!");
   } catch (error) {
-    console.error('Migration error:', error);
+    console.error("Migration error:", error);
     process.exit(1);
   } finally {
     await queryRunner.release();
@@ -73,6 +73,6 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error('Runner error:', err);
+  console.error("Runner error:", err);
   process.exit(1);
 });

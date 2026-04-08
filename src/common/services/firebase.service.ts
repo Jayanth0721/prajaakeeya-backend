@@ -1,5 +1,5 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import * as admin from 'firebase-admin';
+import { Injectable, UnauthorizedException } from "@nestjs/common";
+import * as admin from "firebase-admin";
 
 @Injectable()
 export class FirebaseService {
@@ -12,16 +12,18 @@ export class FirebaseService {
         ? require(process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
         : {
             projectId: process.env.FIREBASE_PROJECT_ID,
-            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+            privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
             clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           };
 
       this.firebaseApp = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+        credential: admin.credential.cert(
+          serviceAccount as admin.ServiceAccount,
+        ),
       });
     } catch (error) {
-      console.error('Firebase initialization error:', error);
-      throw new Error('Failed to initialize Firebase');
+      console.error("Firebase initialization error:", error);
+      throw new Error("Failed to initialize Firebase");
     }
   }
 
@@ -35,8 +37,8 @@ export class FirebaseService {
       const decodedToken = await this.firebaseApp.auth().verifyIdToken(idToken);
       return decodedToken;
     } catch (error) {
-      console.error('Token verification error:', error);
-      throw new UnauthorizedException('Invalid Firebase token');
+      console.error("Token verification error:", error);
+      throw new UnauthorizedException("Invalid Firebase token");
     }
   }
 
@@ -73,10 +75,12 @@ export class FirebaseService {
    */
   async createCustomToken(uid: string, additionalClaims?: object) {
     try {
-      return await this.firebaseApp.auth().createCustomToken(uid, additionalClaims);
+      return await this.firebaseApp
+        .auth()
+        .createCustomToken(uid, additionalClaims);
     } catch (error) {
-      console.error('Custom token creation error:', error);
-      throw new Error('Failed to create custom token');
+      console.error("Custom token creation error:", error);
+      throw new Error("Failed to create custom token");
     }
   }
 }

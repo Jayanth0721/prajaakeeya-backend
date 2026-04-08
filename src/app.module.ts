@@ -1,80 +1,119 @@
-import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
-import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { Module } from "@nestjs/common";
+import { APP_GUARD } from "@nestjs/core";
+import { ConfigModule } from "@nestjs/config";
+import { TypeOrmModule } from "@nestjs/typeorm";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
 
-import * as fs from 'fs';
+import * as fs from "fs";
 
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { WardsModule } from './wards/wards.module';
-import { VoterRollModule } from './voter-roll/voter-roll.module';
-import { AspirantsModule } from './aspirants/aspirants.module';
-import { VotesModule } from './votes/votes.module';
-import { AdminModule } from './admin/admin.module';
-import { ExtractionModule } from './extraction/extraction.module';
-import { VerificationModule } from './verification/verification.module';
-import { PdfUploadModule } from './pdf-upload/pdf-upload.module';
-import { ForumModule } from './forum/forum.module';
-import { GeographyModule } from './geography/geography.module';
-import { AspirantChatModule } from './aspirants/aspirant-chat.module';
-import { MediaModule } from './common/media.module';
+import { validate } from "./config/env.validation";
+import { AuthModule } from "./auth/auth.module";
+import { UsersModule } from "./users/users.module";
+import { WardsModule } from "./wards/wards.module";
+import { VoterRollModule } from "./voter-roll/voter-roll.module";
+import { AspirantsModule } from "./aspirants/aspirants.module";
+import { VotesModule } from "./votes/votes.module";
+import { AdminModule } from "./admin/admin.module";
+import { ExtractionModule } from "./extraction/extraction.module";
+import { VerificationModule } from "./verification/verification.module";
+import { PdfUploadModule } from "./pdf-upload/pdf-upload.module";
+import { ForumModule } from "./forum/forum.module";
+import { GeographyModule } from "./geography/geography.module";
+import { AspirantChatModule } from "./aspirants/aspirant-chat.module";
+import { MediaModule } from "./common/media.module";
+import { HealthController } from "./health/health.controller";
 
-import { User } from './users/user.entity';
-import { Ward } from './wards/ward.entity';
-import { Voter } from './voter-roll/voter.entity';
-import { Aspirant } from './aspirants/aspirant.entity';
-import { Vote } from './votes/vote.entity';
-import { VotingWindow } from './votes/voting-window.entity';
-import { Otp } from './auth/otp.entity';
-import { Message } from './forum/message.entity';
-import { State } from './geography/state.entity';
-import { Parliamentary } from './geography/parliamentary.entity';
-import { Assembly } from './geography/assembly.entity';
-import { Municipality } from './geography/municipality.entity';
-import { Report } from './users/report.entity';
-import { WardMeeting } from './wards/ward-meeting.entity';
+import { User } from "./users/user.entity";
+import { Ward } from "./wards/ward.entity";
+import { Voter } from "./voter-roll/voter.entity";
+import { Aspirant } from "./aspirants/aspirant.entity";
+import { Vote } from "./votes/vote.entity";
+import { VotingWindow } from "./votes/voting-window.entity";
+import { Otp } from "./auth/otp.entity";
+import { Message } from "./forum/message.entity";
+import { State } from "./geography/state.entity";
+import { Parliamentary } from "./geography/parliamentary.entity";
+import { Assembly } from "./geography/assembly.entity";
+import { Municipality } from "./geography/municipality.entity";
+import { Report } from "./users/report.entity";
+import { WardMeeting } from "./wards/ward-meeting.entity";
 
-import { AspirantMessage } from './aspirants/aspirant-message.entity';
-import { AspirantMeeting } from './aspirants/aspirant-meeting.entity';
-import { AspirantBooking } from './aspirants/aspirant-booking.entity';
-import { AspirantVisit } from './aspirants/aspirant-visit.entity';
-import { VisitResponse } from './aspirants/visit-response.entity';
-import { MeetingResponse } from './aspirants/meeting-response.entity';
-import { ActivityRating } from './aspirants/activity-rating.entity';
-import { PendingAspirantRegistration } from './aspirants/pending-aspirant-registration.entity';
-import { AspirantDiscussionModule } from './aspirant-discussion/aspirant-discussion.module';
-import { AspirantDiscussionMessage } from './aspirant-discussion/aspirant-discussion-message.entity';
-import { AdminDocument } from './admin/admin-document.entity';
-import { UserSignedDocument } from './users/user-signed-document.entity';
-import { UserAspirantInteraction } from './users/user-aspirant-interaction.entity';
-import { AspirantWardMeetingsModule } from './aspirant-ward-meetings/aspirant-ward-meetings.module';
-import { IssuesModule } from './issues/issues.module';
-import { Issue } from './issues/issue.entity';
-import { HandRaise } from './issues/hand-raise.entity';
-import { ElectionsModule } from './elections/elections.module';
-import { Election } from './elections/election.entity';
-import { GramaPanchayatModule } from './grama-panchayat/grama-panchayat.module';
-import { GramaPanchayat } from './grama-panchayat/grama-panchayat.entity';
+import { AspirantMessage } from "./aspirants/aspirant-message.entity";
+import { AspirantMeeting } from "./aspirants/aspirant-meeting.entity";
+import { AspirantBooking } from "./aspirants/aspirant-booking.entity";
+import { AspirantVisit } from "./aspirants/aspirant-visit.entity";
+import { VisitResponse } from "./aspirants/visit-response.entity";
+import { MeetingResponse } from "./aspirants/meeting-response.entity";
+import { ActivityRating } from "./aspirants/activity-rating.entity";
+import { PendingAspirantRegistration } from "./aspirants/pending-aspirant-registration.entity";
+import { AspirantDiscussionModule } from "./aspirant-discussion/aspirant-discussion.module";
+import { AspirantDiscussionMessage } from "./aspirant-discussion/aspirant-discussion-message.entity";
+import { AdminDocument } from "./admin/admin-document.entity";
+import { UserSignedDocument } from "./users/user-signed-document.entity";
+import { UserAspirantInteraction } from "./users/user-aspirant-interaction.entity";
+import { AspirantWardMeetingsModule } from "./aspirant-ward-meetings/aspirant-ward-meetings.module";
+import { IssuesModule } from "./issues/issues.module";
+import { Issue } from "./issues/issue.entity";
+import { HandRaise } from "./issues/hand-raise.entity";
+import { ElectionsModule } from "./elections/elections.module";
+import { Election } from "./elections/election.entity";
+import { GramaPanchayatModule } from "./grama-panchayat/grama-panchayat.module";
+import { GramaPanchayat } from "./grama-panchayat/grama-panchayat.entity";
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({ isGlobal: true, validate }),
 
     // Global rate limiting: configurable via env vars THROTTLE_TTL and THROTTLE_LIMIT
     // Default: 100 requests per 60 seconds (bot protection)
     // Set THROTTLE_LIMIT=999 for testing (disable) or adjust THROTTLE_TTL/THROTTLE_LIMIT as needed
-    ThrottlerModule.forRoot([{
-      ttl: parseInt(process.env.THROTTLE_TTL || '60000'),
-      limit: parseInt(process.env.THROTTLE_LIMIT || '200')
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: parseInt(process.env.THROTTLE_TTL || "60000"),
+        limit: parseInt(process.env.THROTTLE_LIMIT || "200"),
+      },
+    ]),
 
     TypeOrmModule.forRoot({
-      type: 'postgres',
+      type: "postgres",
       url: process.env.DATABASE_URL,
       synchronize: true,
-      entities: [User, Ward, Voter, Aspirant, Vote, VotingWindow, Otp, Message, State, Parliamentary, Assembly, Municipality, Report, WardMeeting, AspirantMessage, AspirantMeeting, AspirantBooking, AspirantVisit, VisitResponse, MeetingResponse, ActivityRating, PendingAspirantRegistration, AspirantDiscussionMessage, AdminDocument, UserSignedDocument, UserAspirantInteraction, Issue, HandRaise, Election, GramaPanchayat]
+      ssl:
+        process.env.NODE_ENV === "production"
+          ? { rejectUnauthorized: false }
+          : false,
+      entities: [
+        User,
+        Ward,
+        Voter,
+        Aspirant,
+        Vote,
+        VotingWindow,
+        Otp,
+        Message,
+        State,
+        Parliamentary,
+        Assembly,
+        Municipality,
+        Report,
+        WardMeeting,
+        AspirantMessage,
+        AspirantMeeting,
+        AspirantBooking,
+        AspirantVisit,
+        VisitResponse,
+        MeetingResponse,
+        ActivityRating,
+        PendingAspirantRegistration,
+        AspirantDiscussionMessage,
+        AdminDocument,
+        UserSignedDocument,
+        UserAspirantInteraction,
+        Issue,
+        HandRaise,
+        Election,
+        GramaPanchayat,
+      ],
     }),
 
     AuthModule,
@@ -95,8 +134,9 @@ import { GramaPanchayat } from './grama-panchayat/grama-panchayat.entity';
     IssuesModule,
     ElectionsModule,
     GramaPanchayatModule,
-    MediaModule
+    MediaModule,
   ],
+  controllers: [HealthController],
   providers: [
     // Enforce rate limiting globally across all endpoints
     { provide: APP_GUARD, useClass: ThrottlerGuard },

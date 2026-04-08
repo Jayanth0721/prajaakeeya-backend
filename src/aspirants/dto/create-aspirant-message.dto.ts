@@ -1,10 +1,10 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, MaxLength } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class CreateAspirantMessageDto {
   @ApiProperty({
     description: "Message content for aspirant's chat room",
-    example: 'I have a question about your manifesto item on roads.',
+    example: "I have a question about your manifesto item on roads.",
     maxLength: 5000,
   })
   @IsNotEmpty()

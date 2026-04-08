@@ -1,8 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { GramaPanchayat } from './grama-panchayat.entity';
-import { CreateGramaPanchayatDto } from './dto/create-grama-panchayat.dto';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { GramaPanchayat } from "./grama-panchayat.entity";
+import { CreateGramaPanchayatDto } from "./dto/create-grama-panchayat.dto";
 
 export interface GramaPanchayatFilters {
   state?: string;
@@ -20,12 +20,14 @@ export class GramaPanchayatService {
 
   async findBySrNo(srNo: number): Promise<GramaPanchayat> {
     const row = await this.repo.findOne({ where: { srNo } });
-    if (!row) throw new NotFoundException(`Village with Sr.No ${srNo} not found`);
+    if (!row)
+      throw new NotFoundException(`Village with Sr.No ${srNo} not found`);
     return row;
   }
 
   async findAll(filters?: GramaPanchayatFilters) {
-    const qb = this.repo.createQueryBuilder('gp')
+    const qb = this.repo
+      .createQueryBuilder("gp")
       .select([
         'gp."Sr.No" AS "id"',
         'gp."State" AS "state"',
@@ -36,52 +38,60 @@ export class GramaPanchayatService {
         'gp."Village Code" AS "villageCode"',
         'gp."Population" AS "population"',
       ]);
-    if (filters?.state) qb.andWhere('gp."State" = :state', { state: filters.state });
-    if (filters?.district) qb.andWhere('gp."District" = :district', { district: filters.district });
-    if (filters?.taluk) qb.andWhere('gp."Taluk" = :taluk', { taluk: filters.taluk });
-    if (filters?.gpName) qb.andWhere('gp."GP Name" = :gpName', { gpName: filters.gpName });
-    qb.orderBy('gp."Village Name"', 'ASC');
+    if (filters?.state)
+      qb.andWhere('gp."State" = :state', { state: filters.state });
+    if (filters?.district)
+      qb.andWhere('gp."District" = :district', { district: filters.district });
+    if (filters?.taluk)
+      qb.andWhere('gp."Taluk" = :taluk', { taluk: filters.taluk });
+    if (filters?.gpName)
+      qb.andWhere('gp."GP Name" = :gpName', { gpName: filters.gpName });
+    qb.orderBy('gp."Village Name"', "ASC");
     return qb.getRawMany();
   }
 
   async getStates(): Promise<string[]> {
     const rows = await this.repo
-      .createQueryBuilder('gp')
-      .select('DISTINCT gp."State"', 'state')
-      .orderBy('gp."State"', 'ASC')
+      .createQueryBuilder("gp")
+      .select('DISTINCT gp."State"', "state")
+      .orderBy('gp."State"', "ASC")
       .getRawMany();
     return rows.map((r) => r.state);
   }
 
   async getDistricts(state: string): Promise<string[]> {
     const rows = await this.repo
-      .createQueryBuilder('gp')
-      .select('DISTINCT gp."District"', 'district')
+      .createQueryBuilder("gp")
+      .select('DISTINCT gp."District"', "district")
       .where('gp."State" = :state', { state })
-      .orderBy('gp."District"', 'ASC')
+      .orderBy('gp."District"', "ASC")
       .getRawMany();
     return rows.map((r) => r.district);
   }
 
   async getTaluks(state: string, district: string): Promise<string[]> {
     const rows = await this.repo
-      .createQueryBuilder('gp')
-      .select('DISTINCT gp."Taluk"', 'taluk')
+      .createQueryBuilder("gp")
+      .select('DISTINCT gp."Taluk"', "taluk")
       .where('gp."State" = :state', { state })
       .andWhere('gp."District" = :district', { district })
-      .orderBy('gp."Taluk"', 'ASC')
+      .orderBy('gp."Taluk"', "ASC")
       .getRawMany();
     return rows.map((r) => r.taluk);
   }
 
-  async getGPs(state: string, district: string, taluk: string): Promise<string[]> {
+  async getGPs(
+    state: string,
+    district: string,
+    taluk: string,
+  ): Promise<string[]> {
     const rows = await this.repo
-      .createQueryBuilder('gp')
-      .select('DISTINCT gp."GP Name"', 'gpName')
+      .createQueryBuilder("gp")
+      .select('DISTINCT gp."GP Name"', "gpName")
       .where('gp."State" = :state', { state })
       .andWhere('gp."District" = :district', { district })
       .andWhere('gp."Taluk" = :taluk', { taluk })
-      .orderBy('gp."GP Name"', 'ASC')
+      .orderBy('gp."GP Name"', "ASC")
       .getRawMany();
     return rows.map((r) => r.gpName);
   }
@@ -89,8 +99,8 @@ export class GramaPanchayatService {
   async create(dto: CreateGramaPanchayatDto) {
     // Get next Sr.No
     const result = await this.repo
-      .createQueryBuilder('gp')
-      .select('MAX(gp."Sr.No")', 'max')
+      .createQueryBuilder("gp")
+      .select('MAX(gp."Sr.No")', "max")
       .getRawOne();
     const nextSrNo = (Number(result?.max) || 0) + 1;
 
@@ -125,9 +135,14 @@ export class GramaPanchayatService {
     return { message: `Village '${row.villageName}' (Sr.No ${srNo}) deleted` };
   }
 
-  async getVillages(state: string, district: string, taluk: string, gpName: string) {
+  async getVillages(
+    state: string,
+    district: string,
+    taluk: string,
+    gpName: string,
+  ) {
     const rows = await this.repo
-      .createQueryBuilder('gp')
+      .createQueryBuilder("gp")
       .select([
         'gp."Sr.No" AS "id"',
         'gp."Village Name" AS "villageName"',
@@ -138,7 +153,7 @@ export class GramaPanchayatService {
       .andWhere('gp."District" = :district', { district })
       .andWhere('gp."Taluk" = :taluk', { taluk })
       .andWhere('gp."GP Name" = :gpName', { gpName })
-      .orderBy('gp."Village Name"', 'ASC')
+      .orderBy('gp."Village Name"', "ASC")
       .getRawMany();
     return rows;
   }

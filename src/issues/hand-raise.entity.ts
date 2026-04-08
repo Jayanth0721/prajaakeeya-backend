@@ -1,7 +1,7 @@
-import { Column, Entity } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
+import { Column, Entity } from "typeorm";
+import { BaseEntity } from "../common/base.entity";
 
-@Entity('issue_hand_raises')
+@Entity("issue_hand_raises")
 export class HandRaise extends BaseEntity {
   @Column({ nullable: true })
   electionId?: number;
@@ -15,6 +15,6 @@ export class HandRaise extends BaseEntity {
   @Column()
   createdById!: number;
 
-  @Column({ type: 'text' })
+  @Column({ type: "text" })
   category!: string;
 }

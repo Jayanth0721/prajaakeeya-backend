@@ -1,59 +1,76 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { Aspirant } from './aspirant.entity';
-import { CreateAspirantDto } from './dto/create-aspirant.dto';
-import { UsersService } from '../users/users.service';
-import { WardsService } from '../wards/wards.service';
-import { AspirantMeeting } from './aspirant-meeting.entity';
-import { AspirantBooking } from './aspirant-booking.entity';
-import { AspirantVisit } from './aspirant-visit.entity';
-import { VisitResponse } from './visit-response.entity';
-import { MeetingResponse } from './meeting-response.entity';
-import { VotesService } from '../votes/votes.service';
-import { ElectionsService } from '../elections/elections.service';
-import { ActivityRating } from './activity-rating.entity';
-import { UpdateAspirantDto } from './dto/update-aspirant.dto';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, In } from "typeorm";
+import { Aspirant } from "./aspirant.entity";
+import { CreateAspirantDto } from "./dto/create-aspirant.dto";
+import { UsersService } from "../users/users.service";
+import { WardsService } from "../wards/wards.service";
+import { AspirantMeeting } from "./aspirant-meeting.entity";
+import { AspirantBooking } from "./aspirant-booking.entity";
+import { AspirantVisit } from "./aspirant-visit.entity";
+import { VisitResponse } from "./visit-response.entity";
+import { MeetingResponse } from "./meeting-response.entity";
+import { VotesService } from "../votes/votes.service";
+import { ElectionsService } from "../elections/elections.service";
+import { ActivityRating } from "./activity-rating.entity";
+import { UpdateAspirantDto } from "./dto/update-aspirant.dto";
 
 @Injectable()
 export class AspirantsService {
   constructor(
     @InjectRepository(Aspirant) private readonly repo: Repository<Aspirant>,
-    @InjectRepository(AspirantMeeting) private readonly meetingRepo: Repository<AspirantMeeting>,
-    @InjectRepository(AspirantBooking) private readonly bookingRepo: Repository<AspirantBooking>,
-    @InjectRepository(AspirantVisit) private readonly visitRepo: Repository<AspirantVisit>,
-    @InjectRepository(VisitResponse) private readonly visitResponseRepo: Repository<VisitResponse>,
-    @InjectRepository(MeetingResponse) private readonly meetingResponseRepo: Repository<MeetingResponse>,
-    @InjectRepository(ActivityRating) private readonly activityRatingRepo: Repository<ActivityRating>,
+    @InjectRepository(AspirantMeeting)
+    private readonly meetingRepo: Repository<AspirantMeeting>,
+    @InjectRepository(AspirantBooking)
+    private readonly bookingRepo: Repository<AspirantBooking>,
+    @InjectRepository(AspirantVisit)
+    private readonly visitRepo: Repository<AspirantVisit>,
+    @InjectRepository(VisitResponse)
+    private readonly visitResponseRepo: Repository<VisitResponse>,
+    @InjectRepository(MeetingResponse)
+    private readonly meetingResponseRepo: Repository<MeetingResponse>,
+    @InjectRepository(ActivityRating)
+    private readonly activityRatingRepo: Repository<ActivityRating>,
     private readonly usersService: UsersService,
     private readonly wardsService: WardsService,
     private readonly electionsService: ElectionsService,
-    @Inject(forwardRef(() => VotesService)) private readonly votesService: VotesService,
+    @Inject(forwardRef(() => VotesService))
+    private readonly votesService: VotesService,
   ) {}
 
   async register(dto: CreateAspirantDto, user?: any) {
-    if (!user?.id) throw new BadRequestException('Authentication required');
+    if (!user?.id) throw new BadRequestException("Authentication required");
 
     // Validate phone uniqueness
     if (dto.phone) {
       const phoneOwner = await this.usersService.findByPhone(dto.phone);
       if (phoneOwner && phoneOwner.id !== user.id) {
-        throw new BadRequestException('Phone already in use');
+        throw new BadRequestException("Phone already in use");
       }
     }
 
     // Validate whatsapp number uniqueness
     if (dto.whatsappNumber) {
-      const existing = await this.repo.findOne({ where: { whatsappNumber: dto.whatsappNumber } });
+      const existing = await this.repo.findOne({
+        where: { whatsappNumber: dto.whatsappNumber },
+      });
       if (existing && existing.userId !== user.id) {
-        throw new BadRequestException('WhatsApp number already in use');
+        throw new BadRequestException("WhatsApp number already in use");
       }
     }
 
     // Prevent duplicate active aspirant
     const existing = await this.findByUserId(user.id);
     if (existing?.isActive) {
-      throw new BadRequestException('User already has an active aspirant profile');
+      throw new BadRequestException(
+        "User already has an active aspirant profile",
+      );
     }
 
     return this.create(dto, user);
@@ -63,9 +80,12 @@ export class AspirantsService {
     // Resolve election and set wardId for municipal_corporation
     const election = await this.electionsService.findById(dto.electionId);
     let wardId: number | null = null;
-    if (election.type === 'municipal_corporation') {
+    if (election.type === "municipal_corporation") {
       const ward = await this.wardsService.findOne(dto.constituencyId);
-      if (!ward) throw new NotFoundException(`Ward with id ${dto.constituencyId} not found`);
+      if (!ward)
+        throw new NotFoundException(
+          `Ward with id ${dto.constituencyId} not found`,
+        );
       wardId = ward.id;
     }
 
@@ -98,21 +118,23 @@ export class AspirantsService {
       electionId: dto.electionId,
       constituencyId: dto.constituencyId,
       wardId,
-      userId: undefined as number | undefined
+      userId: undefined as number | undefined,
     };
 
     // Validate phone uniqueness before any writes
     if (dto.phone && user?.id) {
       const phoneOwner = await this.usersService.findByPhone(dto.phone);
       if (phoneOwner && phoneOwner.id !== user.id) {
-        throw new BadRequestException('Phone already in use');
+        throw new BadRequestException("Phone already in use");
       }
     }
 
     if (dto.whatsappNumber && user?.id) {
-      const existing = await this.repo.findOne({ where: { whatsappNumber: dto.whatsappNumber } });
+      const existing = await this.repo.findOne({
+        where: { whatsappNumber: dto.whatsappNumber },
+      });
       if (existing && existing.userId !== user.id) {
-        throw new BadRequestException('WhatsApp number already in use');
+        throw new BadRequestException("WhatsApp number already in use");
       }
     }
 
@@ -121,11 +143,11 @@ export class AspirantsService {
       const existing = await this.findByUserId(user.id);
       if (existing) {
         if (existing.isActive) {
-          throw new BadRequestException('User already has an aspirant');
+          throw new BadRequestException("User already has an aspirant");
         }
         // Reactivate withdrawn aspirant by overwriting with new data
         await this.repo.update(existing.id, { ...entityData, isActive: true });
-        await this.usersService.setRole(user.id, 'aspirant');
+        await this.usersService.setRole(user.id, "aspirant");
         const userToUpdate = await this.usersService.findById(user.id);
         if (userToUpdate) {
           await this.usersService.updateUser(user.id, {
@@ -141,11 +163,11 @@ export class AspirantsService {
     }
 
     const aspirant = this.repo.create(entityData);
-await this.repo.save(aspirant);
-    
+    await this.repo.save(aspirant);
+
     if (user && user.id) {
-      await this.usersService.setRole(user.id, 'aspirant');
-      
+      await this.usersService.setRole(user.id, "aspirant");
+
       // Update user profile with aspirant details
       const userToUpdate = await this.usersService.findById(user.id);
       if (userToUpdate) {
@@ -155,27 +177,41 @@ await this.repo.save(aspirant);
         await this.usersService.updateUser(user.id, {
           phone: userToUpdate.phone,
           age: userToUpdate.age,
-          gender: userToUpdate.gender
+          gender: userToUpdate.gender,
         });
       }
     }
-    
+
     // Include documentStatus in response
     return {
       ...aspirant,
-      documentStatus: aspirant.getDocumentStatus()
+      documentStatus: aspirant.getDocumentStatus(),
     };
   }
 
-  async createBooking(aspirantId: number, voterId: number, message?: string, preferredAt?: number) {
+  async createBooking(
+    aspirantId: number,
+    voterId: number,
+    message?: string,
+    preferredAt?: number,
+  ) {
     const aspirant = await this.repo.findOne({ where: { id: aspirantId } });
-    if (!aspirant) throw new NotFoundException('Aspirant not found');
-    const booking = this.bookingRepo.create({ aspirantId, voterId, message, preferredAt, status: 'pending' });
+    if (!aspirant) throw new NotFoundException("Aspirant not found");
+    const booking = this.bookingRepo.create({
+      aspirantId,
+      voterId,
+      message,
+      preferredAt,
+      status: "pending",
+    });
     return this.bookingRepo.save(booking);
   }
 
   async listBookingsForAspirant(aspirantId: number) {
-    const bookings = await this.bookingRepo.find({ where: { aspirantId }, order: { createdAt: 'DESC' } });
+    const bookings = await this.bookingRepo.find({
+      where: { aspirantId },
+      order: { createdAt: "DESC" },
+    });
     const results = await Promise.all(
       bookings.map(async (b: any) => {
         const user = await this.usersService.findById(b.voterId);
@@ -189,22 +225,42 @@ await this.repo.save(aspirant);
           message: b.message,
           preferredAt: b.preferredAt,
           status: b.status,
-          scheduledAt: b.scheduledAt
+          scheduledAt: b.scheduledAt,
         };
-      })
+      }),
     );
     return results;
   }
 
-  async createVisit(aspirantId: number, startTime: number, endTime?: number, title?: string, description?: string, location?: string, googleMapsLink?: string) {
+  async createVisit(
+    aspirantId: number,
+    startTime: number,
+    endTime?: number,
+    title?: string,
+    description?: string,
+    location?: string,
+    googleMapsLink?: string,
+  ) {
     const aspirant = await this.repo.findOne({ where: { id: aspirantId } });
-    if (!aspirant) throw new NotFoundException('Aspirant not found');
-    const visit = this.visitRepo.create({ aspirantId, startTime, endTime, title, description, location, googleMapsLink });
+    if (!aspirant) throw new NotFoundException("Aspirant not found");
+    const visit = this.visitRepo.create({
+      aspirantId,
+      startTime,
+      endTime,
+      title,
+      description,
+      location,
+      googleMapsLink,
+    });
     return this.visitRepo.save(visit);
   }
 
   async listVisitsForAspirant(aspirantId: number) {
-    const visits = await this.visitRepo.find({ where: { aspirantId }, relations: ['responses'], order: { startTime: 'DESC' } });
+    const visits = await this.visitRepo.find({
+      where: { aspirantId },
+      relations: ["responses"],
+      order: { startTime: "DESC" },
+    });
     return visits.map((v: any) => ({
       id: v.id,
       createdAt: v.createdAt,
@@ -216,15 +272,18 @@ await this.repo.save(aspirant);
       description: v.description,
       location: v.location,
       googleMapsLink: v.googleMapsLink,
-      attendingCount: (v.responses || []).filter((r: any) => r.attending).length
+      attendingCount: (v.responses || []).filter((r: any) => r.attending)
+        .length,
     }));
   }
 
   async respondToVisit(visitId: number, voterId: number, attending: boolean) {
     const visit = await this.visitRepo.findOne({ where: { id: visitId } });
-    if (!visit) throw new NotFoundException('Visit not found');
-    
-    let response = await this.visitResponseRepo.findOne({ where: { visitId, voterId } });
+    if (!visit) throw new NotFoundException("Visit not found");
+
+    let response = await this.visitResponseRepo.findOne({
+      where: { visitId, voterId },
+    });
     if (response) {
       response.attending = attending;
     } else {
@@ -233,26 +292,44 @@ await this.repo.save(aspirant);
     return this.visitResponseRepo.save(response);
   }
 
-  async respondToMeeting(meetingId: number, voterId: number, attending: boolean) {
-    const meeting = await this.meetingRepo.findOne({ where: { id: meetingId } });
-    if (!meeting) throw new NotFoundException('Meeting not found');
+  async respondToMeeting(
+    meetingId: number,
+    voterId: number,
+    attending: boolean,
+  ) {
+    const meeting = await this.meetingRepo.findOne({
+      where: { id: meetingId },
+    });
+    if (!meeting) throw new NotFoundException("Meeting not found");
 
-    let response = await this.meetingResponseRepo.findOne({ where: { meetingId, voterId } });
+    let response = await this.meetingResponseRepo.findOne({
+      where: { meetingId, voterId },
+    });
     if (response) {
       response.attending = attending;
     } else {
-      response = this.meetingResponseRepo.create({ meetingId, voterId, attending });
+      response = this.meetingResponseRepo.create({
+        meetingId,
+        voterId,
+        attending,
+      });
     }
     await this.meetingResponseRepo.save(response);
 
     // Return updated meeting with fresh counts
-    const updated = await this.meetingRepo.findOne({ where: { id: meetingId }, relations: ['responses'] });
+    const updated = await this.meetingRepo.findOne({
+      where: { id: meetingId },
+      relations: ["responses"],
+    });
     return {
       id: updated!.id,
       meetingId,
       attending,
-      attendingCount: (updated!.responses || []).filter((r: any) => r.attending).length,
-      notAttendingCount: (updated!.responses || []).filter((r: any) => !r.attending).length,
+      attendingCount: (updated!.responses || []).filter((r: any) => r.attending)
+        .length,
+      notAttendingCount: (updated!.responses || []).filter(
+        (r: any) => !r.attending,
+      ).length,
     };
   }
 
@@ -261,14 +338,17 @@ await this.repo.save(aspirant);
   }
 
   findByWard(wardId: number) {
-    return this.repo.find({ where: { wardId, isActive: true }, order: { createdAt: 'DESC' } });
+    return this.repo.find({
+      where: { wardId, isActive: true },
+      order: { createdAt: "DESC" },
+    });
   }
 
   async findByWardAndName(wardId: number, name: string) {
     return this.repo
-      .createQueryBuilder('aspirant')
-      .where('aspirant.wardId = :wardId', { wardId })
-      .andWhere('LOWER(aspirant.name) = LOWER(:name)', { name })
+      .createQueryBuilder("aspirant")
+      .where("aspirant.wardId = :wardId", { wardId })
+      .andWhere("LOWER(aspirant.name) = LOWER(:name)", { name })
       .getOne();
   }
 
@@ -278,22 +358,30 @@ await this.repo.save(aspirant);
 
   async findByWardNumber(wardNumber: string) {
     const aspirants = await this.repo
-      .createQueryBuilder('aspirant')
-      .leftJoinAndSelect('aspirant.ward', 'ward')
-      .leftJoinAndSelect('aspirant.user', 'user')
-      .leftJoinAndSelect('aspirant.meetings', 'meetings')
-      .leftJoinAndSelect('meetings.responses', 'meetingResponses')
-      .where('ward.number = :wardNumber', { wardNumber })
-      .andWhere('aspirant.isActive = :isActive', { isActive: true })
-      .orderBy('aspirant.createdAt', 'DESC')
+      .createQueryBuilder("aspirant")
+      .leftJoinAndSelect("aspirant.ward", "ward")
+      .leftJoinAndSelect("aspirant.user", "user")
+      .leftJoinAndSelect("aspirant.meetings", "meetings")
+      .leftJoinAndSelect("meetings.responses", "meetingResponses")
+      .where("ward.number = :wardNumber", { wardNumber })
+      .andWhere("aspirant.isActive = :isActive", { isActive: true })
+      .orderBy("aspirant.createdAt", "DESC")
       .getMany();
 
     if (!aspirants.length) return [];
 
-    const ids = aspirants.map(a => a.id);
+    const ids = aspirants.map((a) => a.id);
 
-    const [allVisits, voteCounts, { meetingRatings, visitRatings, overallRatings }] = await Promise.all([
-      this.visitRepo.find({ where: { aspirantId: In(ids) }, relations: ['responses'], order: { startTime: 'DESC' } }),
+    const [
+      allVisits,
+      voteCounts,
+      { meetingRatings, visitRatings, overallRatings },
+    ] = await Promise.all([
+      this.visitRepo.find({
+        where: { aspirantId: In(ids) },
+        relations: ["responses"],
+        order: { startTime: "DESC" },
+      }),
       this.votesService.countByAspirantIds(ids),
       this.getActivityRatingsBulk(ids),
     ]);
@@ -312,12 +400,13 @@ await this.repo.save(aspirant);
         description: v.description,
         location: v.location,
         googleMapsLink: v.googleMapsLink,
-        attendingCount: (v.responses || []).filter((r: any) => r.attending).length,
+        attendingCount: (v.responses || []).filter((r: any) => r.attending)
+          .length,
         rating: visitRatings[v.id] ?? this.emptyRating(),
       });
     }
 
-    return aspirants.map(aspirant => {
+    return aspirants.map((aspirant) => {
       const { user, ...rest } = aspirant as any;
       return {
         ...rest,
@@ -340,8 +429,11 @@ await this.repo.save(aspirant);
             endTime: m.endTime,
             completed: m.completed,
             notes: m.notes,
-            attendingCount: (m.responses || []).filter((r: any) => r.attending).length,
-            notAttendingCount: (m.responses || []).filter((r: any) => !r.attending).length,
+            attendingCount: (m.responses || []).filter((r: any) => r.attending)
+              .length,
+            notAttendingCount: (m.responses || []).filter(
+              (r: any) => !r.attending,
+            ).length,
             rating: meetingRatings[m.id] ?? this.emptyRating(),
           })),
         documentStatus: aspirant.getDocumentStatus(),
@@ -349,38 +441,53 @@ await this.repo.save(aspirant);
     });
   }
 
-  async findByConstituency(electionId: number, constituencyId: number, userId?: number) {
+  async findByConstituency(
+    electionId: number,
+    constituencyId: number,
+    userId?: number,
+  ) {
     const aspirants = await this.repo
-      .createQueryBuilder('aspirant')
-      .leftJoinAndSelect('aspirant.ward', 'ward')
-      .leftJoinAndSelect('aspirant.user', 'user')
-      .leftJoinAndSelect('aspirant.meetings', 'meetings')
-      .leftJoinAndSelect('meetings.responses', 'meetingResponses')
-      .where('aspirant.electionId = :electionId', { electionId })
-      .andWhere('aspirant.constituencyId = :constituencyId', { constituencyId })
-      .andWhere('aspirant.isActive = :isActive', { isActive: true })
-      .andWhere('aspirant.sopUrl IS NOT NULL')
-      .andWhere('aspirant.selfieUrl IS NOT NULL')
-      .orderBy('aspirant.createdAt', 'DESC')
+      .createQueryBuilder("aspirant")
+      .leftJoinAndSelect("aspirant.ward", "ward")
+      .leftJoinAndSelect("aspirant.user", "user")
+      .leftJoinAndSelect("aspirant.meetings", "meetings")
+      .leftJoinAndSelect("meetings.responses", "meetingResponses")
+      .where("aspirant.electionId = :electionId", { electionId })
+      .andWhere("aspirant.constituencyId = :constituencyId", { constituencyId })
+      .andWhere("aspirant.isActive = :isActive", { isActive: true })
+      .andWhere("aspirant.sopUrl IS NOT NULL")
+      .andWhere("aspirant.selfieUrl IS NOT NULL")
+      .orderBy("aspirant.createdAt", "DESC")
       .getMany();
 
-    if (!aspirants.length) return [this.getDemoAspirant(electionId, constituencyId)];
+    if (!aspirants.length)
+      return [this.getDemoAspirant(electionId, constituencyId)];
 
-    const ids = aspirants.map(a => a.id);
+    const ids = aspirants.map((a) => a.id);
 
-    const [allVisits, voteCounts, { meetingRatings, visitRatings, overallRatings }] = await Promise.all([
-      this.visitRepo.find({ where: { aspirantId: In(ids) }, relations: ['responses'], order: { startTime: 'DESC' } }),
+    const [
+      allVisits,
+      voteCounts,
+      { meetingRatings, visitRatings, overallRatings },
+    ] = await Promise.all([
+      this.visitRepo.find({
+        where: { aspirantId: In(ids) },
+        relations: ["responses"],
+        order: { startTime: "DESC" },
+      }),
       this.votesService.countByAspirantIds(ids),
       this.getActivityRatingsBulk(ids),
     ]);
 
     // If userId is passed, fetch which meetings/visits this user has rated
-    let userRatedMeetings = new Set<number>();
-    let userRatedVisits = new Set<number>();
+    const userRatedMeetings = new Set<number>();
+    const userRatedVisits = new Set<number>();
     if (userId) {
-      const userRatings = await this.activityRatingRepo.find({ where: { voterId: userId, aspirantId: In(ids) } });
+      const userRatings = await this.activityRatingRepo.find({
+        where: { voterId: userId, aspirantId: In(ids) },
+      });
       for (const r of userRatings) {
-        if (r.type === 'meeting') userRatedMeetings.add(r.activityId);
+        if (r.type === "meeting") userRatedMeetings.add(r.activityId);
         else userRatedVisits.add(r.activityId);
       }
     }
@@ -399,23 +506,30 @@ await this.repo.save(aspirant);
         description: v.description,
         location: v.location,
         googleMapsLink: v.googleMapsLink,
-        attendingCount: (v.responses || []).filter((r: any) => r.attending).length,
+        attendingCount: (v.responses || []).filter((r: any) => r.attending)
+          .length,
         rating: visitRatings[v.id] ?? this.emptyRating(),
       };
       if (userId) visitData.isRated = userRatedVisits.has(v.id);
       visitsByAspirant[v.aspirantId].push(visitData);
     }
 
-    const totalVotes = Object.values(voteCounts).reduce((sum: number, c: number) => sum + c, 0);
+    const totalVotes = Object.values(voteCounts).reduce(
+      (sum: number, c: number) => sum + c,
+      0,
+    );
 
-    return aspirants.map(aspirant => {
+    return aspirants.map((aspirant) => {
       const { user, ...rest } = aspirant as any;
       const voteCount = voteCounts[aspirant.id] ?? 0;
       return {
         ...rest,
         email: user?.email ?? null,
         voteCount,
-        votePercentage: totalVotes > 0 ? parseFloat(((voteCount / totalVotes) * 100).toFixed(1)) : 0,
+        votePercentage:
+          totalVotes > 0
+            ? parseFloat(((voteCount / totalVotes) * 100).toFixed(1))
+            : 0,
         overallRating: overallRatings[aspirant.id] ?? this.emptyRating(),
         visits: visitsByAspirant[aspirant.id] ?? [],
         meetings: (aspirant.meetings || [])
@@ -434,8 +548,12 @@ await this.repo.save(aspirant);
               endTime: m.endTime,
               completed: m.completed,
               notes: m.notes,
-              attendingCount: (m.responses || []).filter((r: any) => r.attending).length,
-              notAttendingCount: (m.responses || []).filter((r: any) => !r.attending).length,
+              attendingCount: (m.responses || []).filter(
+                (r: any) => r.attending,
+              ).length,
+              notAttendingCount: (m.responses || []).filter(
+                (r: any) => !r.attending,
+              ).length,
               rating: meetingRatings[m.id] ?? this.emptyRating(),
             };
             if (userId) meetingData.isRated = userRatedMeetings.has(m.id);
@@ -447,18 +565,26 @@ await this.repo.save(aspirant);
   }
 
   async approve(id: number) {
-    await this.repo.update(id, { status: 'approved' });
+    await this.repo.update(id, { status: "approved" });
     return this.repo.findOne({ where: { id } });
   }
 
   async findOne(id: number, currentUser?: any) {
     if (id === 0) return this.getDemoAspirant();
 
-    const aspirant = await this.repo.findOne({ where: { id }, relations: { ward: true, meetings: { responses: true } } as any });
+    const aspirant = await this.repo.findOne({
+      where: { id },
+      relations: { ward: true, meetings: { responses: true } } as any,
+    });
     if (!aspirant) return null;
 
-    const { meetingRatings, visitRatings, overallRatings } = await this.getActivityRatingsBulk([id]);
-    const visits = await this.visitRepo.find({ where: { aspirantId: id }, relations: ['responses'], order: { startTime: 'DESC' } });
+    const { meetingRatings, visitRatings, overallRatings } =
+      await this.getActivityRatingsBulk([id]);
+    const visits = await this.visitRepo.find({
+      where: { aspirantId: id },
+      relations: ["responses"],
+      order: { startTime: "DESC" },
+    });
 
     const mappedMeetings = (aspirant.meetings || [])
       .sort((a: any, b: any) => b.startTime - a.startTime)
@@ -468,15 +594,17 @@ await this.repo.save(aspirant);
         updatedAt: m.updatedAt,
         aspirantId: m.aspirantId,
         meetingLink: m.meetingLink,
-            platform: m.platform,
+        platform: m.platform,
         title: m.title,
         description: m.description,
         startTime: m.startTime,
         endTime: m.endTime,
         completed: m.completed,
         notes: m.notes,
-        attendingCount: (m.responses || []).filter((r: any) => r.attending).length,
-        notAttendingCount: (m.responses || []).filter((r: any) => !r.attending).length,
+        attendingCount: (m.responses || []).filter((r: any) => r.attending)
+          .length,
+        notAttendingCount: (m.responses || []).filter((r: any) => !r.attending)
+          .length,
         rating: meetingRatings[m.id] ?? this.emptyRating(),
       }));
 
@@ -491,11 +619,16 @@ await this.repo.save(aspirant);
       description: v.description,
       location: v.location,
       googleMapsLink: v.googleMapsLink,
-      attendingCount: (v.responses || []).filter((r: any) => r.attending).length,
+      attendingCount: (v.responses || []).filter((r: any) => r.attending)
+        .length,
       rating: visitRatings[v.id] ?? this.emptyRating(),
     }));
 
-    if ((!aspirant.gender || aspirant.gender === '') && currentUser && currentUser.gender) {
+    if (
+      (!aspirant.gender || aspirant.gender === "") &&
+      currentUser &&
+      currentUser.gender
+    ) {
       aspirant.gender = currentUser.gender;
     }
 
@@ -504,24 +637,34 @@ await this.repo.save(aspirant);
     let constituencyName: string | null = null;
     if (aspirant.electionId) {
       try {
-        const election = await this.electionsService.findById(aspirant.electionId);
+        const election = await this.electionsService.findById(
+          aspirant.electionId,
+        );
         electionName = election.name;
         if (aspirant.constituencyId) {
-          if (election.type === 'lok_sabha') {
-            const c = await this.repo.manager.findOne('Parliamentary', { where: { id: aspirant.constituencyId } } as any);
+          if (election.type === "lok_sabha") {
+            const c = await this.repo.manager.findOne("Parliamentary", {
+              where: { id: aspirant.constituencyId },
+            } as any);
             if (c) constituencyName = (c as any).name;
-          } else if (election.type === 'state_assembly') {
-            const c = await this.repo.manager.findOne('Assembly', { where: { id: aspirant.constituencyId } } as any);
+          } else if (election.type === "state_assembly") {
+            const c = await this.repo.manager.findOne("Assembly", {
+              where: { id: aspirant.constituencyId },
+            } as any);
             if (c) constituencyName = (c as any).name;
-          } else if (election.type === 'municipal_corporation') {
+          } else if (election.type === "municipal_corporation") {
             const w = await this.wardsService.findOne(aspirant.constituencyId);
             if (w) constituencyName = w.name;
-          } else if (election.type === 'gram_panchayat') {
-            const gp = await this.repo.manager.findOne('GramaPanchayat', { where: { srNo: aspirant.constituencyId } } as any);
+          } else if (election.type === "gram_panchayat") {
+            const gp = await this.repo.manager.findOne("GramaPanchayat", {
+              where: { srNo: aspirant.constituencyId },
+            } as any);
             if (gp) constituencyName = (gp as any).villageName;
           }
         }
-      } catch { /* skip if not found */ }
+      } catch {
+        /* skip if not found */
+      }
     }
 
     return {
@@ -531,46 +674,85 @@ await this.repo.save(aspirant);
       meetings: mappedMeetings,
       visits: mappedVisits,
       overallRating: overallRatings[id] ?? this.emptyRating(),
-      documentStatus: aspirant.getDocumentStatus()
+      documentStatus: aspirant.getDocumentStatus(),
     };
   }
 
-  async setMeetingLink(id: number, meetingLink: string, startTime: number, endTime?: number, title?: string, description?: string, platform?: string) {
+  async setMeetingLink(
+    id: number,
+    meetingLink: string,
+    startTime: number,
+    endTime?: number,
+    title?: string,
+    description?: string,
+    platform?: string,
+  ) {
     const aspirant = await this.repo.findOne({ where: { id } });
-    if (!aspirant) throw new NotFoundException('Aspirant not found');
+    if (!aspirant) throw new NotFoundException("Aspirant not found");
 
-    const meeting = this.meetingRepo.create({ aspirantId: aspirant.id, meetingLink, platform: platform ?? 'others', startTime, endTime, title, description } as any);
+    const meeting = this.meetingRepo.create({
+      aspirantId: aspirant.id,
+      meetingLink,
+      platform: platform ?? "others",
+      startTime,
+      endTime,
+      title,
+      description,
+    } as any);
     await this.meetingRepo.save(meeting);
-    return this.repo.findOne({ where: { id }, relations: ['ward', 'meetings'] });
+    return this.repo.findOne({
+      where: { id },
+      relations: ["ward", "meetings"],
+    });
   }
 
-  async setMeetingLinkForMultiple(aspirantIds: number[], meetingLink: string, startTime: number, endTime?: number, title?: string, description?: string, platform?: string) {
+  async setMeetingLinkForMultiple(
+    aspirantIds: number[],
+    meetingLink: string,
+    startTime: number,
+    endTime?: number,
+    title?: string,
+    description?: string,
+    platform?: string,
+  ) {
     // Fetch all aspirants and verify they exist
     const aspirants = await this.repo.findByIds(aspirantIds);
 
     if (aspirants.length !== aspirantIds.length) {
-      const foundIds = aspirants.map(a => a.id);
-      const missingIds = aspirantIds.filter(id => !foundIds.includes(id));
-      throw new NotFoundException(`Aspirants not found: ${missingIds.join(', ')}`);
+      const foundIds = aspirants.map((a) => a.id);
+      const missingIds = aspirantIds.filter((id) => !foundIds.includes(id));
+      throw new NotFoundException(
+        `Aspirants not found: ${missingIds.join(", ")}`,
+      );
     }
 
     // Create meetings for all aspirants
-    const meetings = aspirantIds.map(aspirantId =>
-      this.meetingRepo.create({ aspirantId, meetingLink, platform: platform ?? 'others', startTime, endTime, title, description } as any)
+    const meetings = aspirantIds.map((aspirantId) =>
+      this.meetingRepo.create({
+        aspirantId,
+        meetingLink,
+        platform: platform ?? "others",
+        startTime,
+        endTime,
+        title,
+        description,
+      } as any),
     );
-    
+
     await this.meetingRepo.save(meetings as any);
 
     // Return updated aspirants with their meetings
     return this.repo.find({
-      where: aspirantIds.map(id => ({ id })),
-      relations: ['ward', 'meetings']
+      where: aspirantIds.map((id) => ({ id })),
+      relations: ["ward", "meetings"],
     });
   }
 
   async completeMeeting(aspirantId: number, meetingId: number, notes: string) {
-    const meeting = await this.meetingRepo.findOne({ where: { id: meetingId, aspirantId } });
-    if (!meeting) throw new NotFoundException('Meeting not found');
+    const meeting = await this.meetingRepo.findOne({
+      where: { id: meetingId, aspirantId },
+    });
+    if (!meeting) throw new NotFoundException("Meeting not found");
     meeting.completed = true;
     meeting.notes = notes;
     await this.meetingRepo.save(meeting);
@@ -582,8 +764,8 @@ await this.repo.save(aspirant);
     // verify meetings exist
     const meetings = await this.meetingRepo.findByIds(meetingIds);
     if (meetings.length === 0) return { deleted: 0 };
-    const foundIds = meetings.map(m => m.id);
-    const toDelete = meetingIds.filter(id => foundIds.includes(id));
+    const foundIds = meetings.map((m) => m.id);
+    const toDelete = meetingIds.filter((id) => foundIds.includes(id));
     if (toDelete.length === 0) return { deleted: 0 };
     const res = await this.meetingRepo.delete(toDelete);
     // TypeORM DeleteResult doesn't always include affected on some drivers; compute from found
@@ -591,8 +773,10 @@ await this.repo.save(aspirant);
   }
 
   async deleteVisit(aspirantId: number, visitId: number) {
-    const visit = await this.visitRepo.findOne({ where: { id: visitId, aspirantId } });
-    if (!visit) throw new NotFoundException('Visit not found');
+    const visit = await this.visitRepo.findOne({
+      where: { id: visitId, aspirantId },
+    });
+    if (!visit) throw new NotFoundException("Visit not found");
     await this.visitRepo.delete(visitId);
     return { deleted: 1 };
   }
@@ -601,7 +785,9 @@ await this.repo.save(aspirant);
     if (!visitIds || visitIds.length === 0) return { deleted: 0 };
     const visits = await this.visitRepo.findByIds(visitIds);
     // ensure they belong to aspirant
-    const owned = visits.filter(v => v.aspirantId === aspirantId).map(v => v.id);
+    const owned = visits
+      .filter((v) => v.aspirantId === aspirantId)
+      .map((v) => v.id);
     if (owned.length === 0) return { deleted: 0 };
     await this.visitRepo.delete(owned);
     return { deleted: owned.length };
@@ -609,38 +795,70 @@ await this.repo.save(aspirant);
 
   async withdrawAspirant(userId: number) {
     const aspirant = await this.repo.findOne({ where: { userId } });
-    if (!aspirant) throw new NotFoundException('No aspirant profile found for this user');
+    if (!aspirant)
+      throw new NotFoundException("No aspirant profile found for this user");
     // Check if voting is currently allowed via VotesService
     const votingAllowed = await this.votesService.isVotingAllowed();
     if (votingAllowed) {
-      throw new BadRequestException('Cannot withdraw candidacy while voting is allowed');
+      throw new BadRequestException(
+        "Cannot withdraw candidacy while voting is allowed",
+      );
     }
 
-    await this.repo.update(aspirant.id, { isActive: false, sopUrl: null as any, selfieUrl: null as any, phone: null as any });
-    await this.usersService.setRole(userId, 'voter');
+    await this.repo.update(aspirant.id, {
+      isActive: false,
+      sopUrl: null as any,
+      selfieUrl: null as any,
+      phone: null as any,
+    });
+    await this.usersService.setRole(userId, "voter");
     await this.usersService.clearPhone(userId);
-    return { message: 'Aspirant candidacy withdrawn. Role reverted to voter.' };
+    return { message: "Aspirant candidacy withdrawn. Role reverted to voter." };
   }
 
-  async updateAspirant(aspirantId: number, userId: number, dto: UpdateAspirantDto) {
-    const aspirant = await this.repo.findOne({ where: { id: aspirantId, userId } });
-    if (!aspirant) throw new NotFoundException('Aspirant not found or does not belong to this user');
+  async updateAspirant(
+    aspirantId: number,
+    userId: number,
+    dto: UpdateAspirantDto,
+  ) {
+    const aspirant = await this.repo.findOne({
+      where: { id: aspirantId, userId },
+    });
+    if (!aspirant)
+      throw new NotFoundException(
+        "Aspirant not found or does not belong to this user",
+      );
 
     if (dto.phone && dto.phone !== aspirant.phone) {
       const phoneOwner = await this.usersService.findByPhone(dto.phone);
       if (phoneOwner && phoneOwner.id !== userId) {
-        throw new BadRequestException('Phone already in use');
+        throw new BadRequestException("Phone already in use");
       }
     }
 
     if (dto.whatsappNumber && dto.whatsappNumber !== aspirant.whatsappNumber) {
-      const existing = await this.repo.findOne({ where: { whatsappNumber: dto.whatsappNumber } });
+      const existing = await this.repo.findOne({
+        where: { whatsappNumber: dto.whatsappNumber },
+      });
       if (existing && existing.userId !== userId) {
-        throw new BadRequestException('WhatsApp number already in use');
+        throw new BadRequestException("WhatsApp number already in use");
       }
     }
 
-    const updatableFields = ['age', 'gender', 'education', 'occupation', 'phone', 'address', 'manifesto', 'instagramLink', 'facebookLink', 'linkedinLink', 'twitterLink', 'whatsappNumber'] as const;
+    const updatableFields = [
+      "age",
+      "gender",
+      "education",
+      "occupation",
+      "phone",
+      "address",
+      "manifesto",
+      "instagramLink",
+      "facebookLink",
+      "linkedinLink",
+      "twitterLink",
+      "whatsappNumber",
+    ] as const;
     for (const field of updatableFields) {
       if (dto[field] !== undefined) (aspirant as any)[field] = dto[field];
     }
@@ -660,43 +878,71 @@ await this.repo.save(aspirant);
     return { ...aspirant, documentStatus: aspirant.getDocumentStatus() };
   }
 
-  async updatePermissions(aspirantId: number, userId: number, dto: { allowPhone?: boolean; allowWhatsapp?: boolean; allowChat?: boolean }) {
-    const aspirant = await this.repo.findOne({ where: { id: aspirantId, userId } });
-    if (!aspirant) throw new NotFoundException('Aspirant not found or does not belong to this user');
+  async updatePermissions(
+    aspirantId: number,
+    userId: number,
+    dto: { allowPhone?: boolean; allowWhatsapp?: boolean; allowChat?: boolean },
+  ) {
+    const aspirant = await this.repo.findOne({
+      where: { id: aspirantId, userId },
+    });
+    if (!aspirant)
+      throw new NotFoundException(
+        "Aspirant not found or does not belong to this user",
+      );
 
     if (dto.allowPhone !== undefined) aspirant.allowPhone = dto.allowPhone;
-    if (dto.allowWhatsapp !== undefined) aspirant.allowWhatsapp = dto.allowWhatsapp;
+    if (dto.allowWhatsapp !== undefined)
+      aspirant.allowWhatsapp = dto.allowWhatsapp;
     if (dto.allowChat !== undefined) aspirant.allowChat = dto.allowChat;
 
     await this.repo.save(aspirant);
-    return { allowPhone: aspirant.allowPhone, allowWhatsapp: aspirant.allowWhatsapp, allowChat: aspirant.allowChat };
+    return {
+      allowPhone: aspirant.allowPhone,
+      allowWhatsapp: aspirant.allowWhatsapp,
+      allowChat: aspirant.allowChat,
+    };
   }
 
   count() {
     return this.repo.count();
   }
 
-  async findAllAspirants(page: number = 1, limit: number = 20, search?: string) {
-    const qb = this.repo.createQueryBuilder('aspirant')
-      .where('aspirant.isActive = :isActive', { isActive: true })
-      .andWhere('aspirant.sopUrl IS NOT NULL')
-      .andWhere('aspirant.selfieUrl IS NOT NULL');
+  async findAllAspirants(
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+  ) {
+    const qb = this.repo
+      .createQueryBuilder("aspirant")
+      .where("aspirant.isActive = :isActive", { isActive: true })
+      .andWhere("aspirant.sopUrl IS NOT NULL")
+      .andWhere("aspirant.selfieUrl IS NOT NULL");
 
     if (search) {
-      qb.andWhere('LOWER(aspirant.name) LIKE :search', { search: `%${search.toLowerCase()}%` });
+      qb.andWhere("LOWER(aspirant.name) LIKE :search", {
+        search: `%${search.toLowerCase()}%`,
+      });
     }
 
     const [aspirants, total] = await qb
-      .orderBy('aspirant.name', 'ASC')
+      .orderBy("aspirant.name", "ASC")
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();
 
-    if (!aspirants.length) return { data: [], total, page, limit, totalPages: 0 };
+    if (!aspirants.length)
+      return { data: [], total, page, limit, totalPages: 0 };
 
     // Collect unique electionIds and resolve election names
-    const electionIds = [...new Set(aspirants.map(a => a.electionId).filter(Boolean))] as number[];
-    const elections = await Promise.all(electionIds.map(id => this.electionsService.findById(id).catch(() => null)));
+    const electionIds = [
+      ...new Set(aspirants.map((a) => a.electionId).filter(Boolean)),
+    ] as number[];
+    const elections = await Promise.all(
+      electionIds.map((id) =>
+        this.electionsService.findById(id).catch(() => null),
+      ),
+    );
     const electionMap: Record<number, string> = {};
     for (const e of elections) {
       if (e) electionMap[e.id] = e.name;
@@ -716,23 +962,31 @@ await this.repo.save(aspirant);
 
       const type = electionTypeMap[a.electionId];
       try {
-        if (type === 'lok_sabha') {
-          const c = await this.repo.manager.findOne('Parliamentary', { where: { id: a.constituencyId } } as any);
+        if (type === "lok_sabha") {
+          const c = await this.repo.manager.findOne("Parliamentary", {
+            where: { id: a.constituencyId },
+          } as any);
           if (c) constituencyNames[key] = (c as any).name;
-        } else if (type === 'state_assembly') {
-          const c = await this.repo.manager.findOne('Assembly', { where: { id: a.constituencyId } } as any);
+        } else if (type === "state_assembly") {
+          const c = await this.repo.manager.findOne("Assembly", {
+            where: { id: a.constituencyId },
+          } as any);
           if (c) constituencyNames[key] = (c as any).name;
-        } else if (type === 'municipal_corporation') {
+        } else if (type === "municipal_corporation") {
           const w = await this.wardsService.findOne(a.constituencyId);
           if (w) constituencyNames[key] = w.name;
-        } else if (type === 'gram_panchayat') {
-          const gp = await this.repo.manager.findOne('GramaPanchayat', { where: { srNo: a.constituencyId } } as any);
+        } else if (type === "gram_panchayat") {
+          const gp = await this.repo.manager.findOne("GramaPanchayat", {
+            where: { srNo: a.constituencyId },
+          } as any);
           if (gp) constituencyNames[key] = (gp as any).villageName;
         }
-      } catch { /* skip if not found */ }
+      } catch {
+        /* skip if not found */
+      }
     }
 
-    const data = aspirants.map(a => ({
+    const data = aspirants.map((a) => ({
       id: a.id,
       name: a.name,
       party: a.party,
@@ -740,7 +994,10 @@ await this.repo.save(aspirant);
       electionId: a.electionId,
       electionName: a.electionId ? (electionMap[a.electionId] ?? null) : null,
       constituencyId: a.constituencyId,
-      constituencyName: a.electionId && a.constituencyId ? (constituencyNames[`${a.electionId}:${a.constituencyId}`] ?? null) : null,
+      constituencyName:
+        a.electionId && a.constituencyId
+          ? (constituencyNames[`${a.electionId}:${a.constituencyId}`] ?? null)
+          : null,
     }));
 
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
@@ -752,50 +1009,87 @@ await this.repo.save(aspirant);
 
   private getDemoAspirant(electionId?: number, constituencyId?: number) {
     const now = new Date().toISOString();
-    const demoOverallRating = { averageRating: 4.2, totalRatings: 48, distribution: { 1: 1, 2: 2, 3: 5, 4: 18, 5: 22 } };
-    const demoMeetingRating1 = { averageRating: 4.5, totalRatings: 20, distribution: { 1: 0, 2: 1, 3: 2, 4: 7, 5: 10 } };
-    const demoMeetingRating2 = { averageRating: 4.0, totalRatings: 15, distribution: { 1: 1, 2: 1, 3: 2, 4: 5, 5: 6 } };
-    const demoMeetingRating3 = { averageRating: 4.3, totalRatings: 8, distribution: { 1: 0, 2: 0, 3: 1, 4: 4, 5: 3 } };
-    const demoMeetingRating4 = { averageRating: 3.8, totalRatings: 5, distribution: { 1: 0, 2: 1, 3: 1, 4: 2, 5: 1 } };
-    const demoVisitRating = { averageRating: 4.4, totalRatings: 12, distribution: { 1: 0, 2: 0, 3: 1, 4: 5, 5: 6 } };
+    const demoOverallRating = {
+      averageRating: 4.2,
+      totalRatings: 48,
+      distribution: { 1: 1, 2: 2, 3: 5, 4: 18, 5: 22 },
+    };
+    const demoMeetingRating1 = {
+      averageRating: 4.5,
+      totalRatings: 20,
+      distribution: { 1: 0, 2: 1, 3: 2, 4: 7, 5: 10 },
+    };
+    const demoMeetingRating2 = {
+      averageRating: 4.0,
+      totalRatings: 15,
+      distribution: { 1: 1, 2: 1, 3: 2, 4: 5, 5: 6 },
+    };
+    const demoMeetingRating3 = {
+      averageRating: 4.3,
+      totalRatings: 8,
+      distribution: { 1: 0, 2: 0, 3: 1, 4: 4, 5: 3 },
+    };
+    const demoMeetingRating4 = {
+      averageRating: 3.8,
+      totalRatings: 5,
+      distribution: { 1: 0, 2: 1, 3: 1, 4: 2, 5: 1 },
+    };
+    const demoVisitRating = {
+      averageRating: 4.4,
+      totalRatings: 12,
+      distribution: { 1: 0, 2: 0, 3: 1, 4: 5, 5: 6 },
+    };
     return {
       id: 0,
       isDemo: true,
-      name: 'Prajaakeeya Demo Aspirant',
-      phone: '9999999999',
-      address: '123 MG Road, Bengaluru, Karnataka',
-      party: 'Independent',
+      name: "Prajaakeeya Demo Aspirant",
+      phone: "9999999999",
+      address: "123 MG Road, Bengaluru, Karnataka",
+      party: "Independent",
       age: 35,
-      education: 'B.Tech Computer Science',
-      occupation: 'Social Worker',
-      gender: 'Male',
+      education: "B.Tech Computer Science",
+      occupation: "Social Worker",
+      gender: "Male",
       meetingLink: null,
-      manifesto: 'This is a demo aspirant profile to showcase how the platform works. Register as an aspirant to create your own profile!',
-      status: 'approved',
+      manifesto:
+        "This is a demo aspirant profile to showcase how the platform works. Register as an aspirant to create your own profile!",
+      status: "approved",
       isActive: true,
       wardId: null,
       electionId: electionId ?? null,
       constituencyId: constituencyId ?? null,
       userId: null,
-      identityBackground: 'Demo aspirant with experience in community development and civic tech.',
-      resignationPledge: 'Yes — I will sign a legal affidavit to resign if poll < 50%.',
-      financialIntegrity: 'I will declare all family assets on the portal before primary selection.',
-      noHighCommand: 'I will follow the digital vote of the ward citizens.',
-      technicalCompetence: 'All budgets will be submitted to Expert Portal for verification before polling.',
-      transparency: 'I agree to upload every bill and receipt to the Live Ledger within 24 hours.',
-      emergencyProtocol: 'I will publish a timestamped justification and notify experts and voters immediately.',
-      expertConsultation: 'Yes — will consult at least three registered experts for projects > ₹1 Lakh.',
-      voterFeedback: 'I will revise the plan and resubmit it for a corrective poll or accept majority rejection.',
-      primaryRule: 'Yes — I will withdraw my nomination and support the selected person.',
-      instagramLink: 'https://instagram.com/prajaakeeya',
-      facebookLink: 'https://facebook.com/prajaakeeya',
+      identityBackground:
+        "Demo aspirant with experience in community development and civic tech.",
+      resignationPledge:
+        "Yes — I will sign a legal affidavit to resign if poll < 50%.",
+      financialIntegrity:
+        "I will declare all family assets on the portal before primary selection.",
+      noHighCommand: "I will follow the digital vote of the ward citizens.",
+      technicalCompetence:
+        "All budgets will be submitted to Expert Portal for verification before polling.",
+      transparency:
+        "I agree to upload every bill and receipt to the Live Ledger within 24 hours.",
+      emergencyProtocol:
+        "I will publish a timestamped justification and notify experts and voters immediately.",
+      expertConsultation:
+        "Yes — will consult at least three registered experts for projects > ₹1 Lakh.",
+      voterFeedback:
+        "I will revise the plan and resubmit it for a corrective poll or accept majority rejection.",
+      primaryRule:
+        "Yes — I will withdraw my nomination and support the selected person.",
+      instagramLink: "https://instagram.com/prajaakeeya",
+      facebookLink: "https://facebook.com/prajaakeeya",
       linkedinLink: null,
-      twitterLink: 'https://twitter.com/prajaakeeya',
-      whatsappNumber: '9999999999',
-      sopUrl: 'https://prajaakeeya.s3.ap-south-1.amazonaws.com/demo/demo-aspirant-sop.pdf',
-      sopStatus: 'verified',
-      selfieUrl: 'https://prajaakeeya.s3.ap-south-1.amazonaws.com/demo/demo-aspirant-avatar.jpg',
-      recentPhotoUrl: 'https://prajaakeeya.s3.ap-south-1.amazonaws.com/demo/demo-aspirant-avatar.jpg',
+      twitterLink: "https://twitter.com/prajaakeeya",
+      whatsappNumber: "9999999999",
+      sopUrl:
+        "https://prajaakeeya.s3.ap-south-1.amazonaws.com/demo/demo-aspirant-sop.pdf",
+      sopStatus: "verified",
+      selfieUrl:
+        "https://prajaakeeya.s3.ap-south-1.amazonaws.com/demo/demo-aspirant-avatar.jpg",
+      recentPhotoUrl:
+        "https://prajaakeeya.s3.ap-south-1.amazonaws.com/demo/demo-aspirant-avatar.jpg",
       allowPhone: true,
       allowWhatsapp: true,
       allowChat: true,
@@ -805,7 +1099,7 @@ await this.repo.save(aspirant);
       voteCount: 5,
       votePercentage: 100,
       overallRating: demoOverallRating,
-      documentStatus: 'completed',
+      documentStatus: "completed",
       visits: [
         {
           id: 0,
@@ -814,9 +1108,10 @@ await this.repo.save(aspirant);
           aspirantId: 0,
           startTime: Date.now() + 86400000,
           endTime: Date.now() + 90000000,
-          title: 'Demo Ward Visit',
-          description: 'This is a demo ward visit to show how visits appear on the platform.',
-          location: 'Community Hall, MG Road, Bengaluru',
+          title: "Demo Ward Visit",
+          description:
+            "This is a demo ward visit to show how visits appear on the platform.",
+          location: "Community Hall, MG Road, Bengaluru",
           googleMapsLink: null,
           attendingCount: 12,
           rating: demoVisitRating,
@@ -828,10 +1123,11 @@ await this.repo.save(aspirant);
           createdAt: now,
           updatedAt: now,
           aspirantId: 0,
-          meetingLink: 'https://meet.google.com/demo',
-          platform: 'google_meet',
-          title: 'Demo Town Hall Meeting',
-          description: 'Open discussion on ward development priorities and upcoming projects.',
+          meetingLink: "https://meet.google.com/demo",
+          platform: "google_meet",
+          title: "Demo Town Hall Meeting",
+          description:
+            "Open discussion on ward development priorities and upcoming projects.",
           startTime: Date.now() + 172800000,
           endTime: Date.now() + 176400000,
           completed: false,
@@ -845,10 +1141,11 @@ await this.repo.save(aspirant);
           createdAt: now,
           updatedAt: now,
           aspirantId: 0,
-          meetingLink: 'https://zoom.us/j/demo123',
-          platform: 'zoom',
-          title: 'Budget Review & Q&A Session',
-          description: 'Reviewing the quarterly budget allocation and answering citizen questions.',
+          meetingLink: "https://zoom.us/j/demo123",
+          platform: "zoom",
+          title: "Budget Review & Q&A Session",
+          description:
+            "Reviewing the quarterly budget allocation and answering citizen questions.",
           startTime: Date.now() + 259200000,
           endTime: Date.now() + 262800000,
           completed: false,
@@ -862,10 +1159,11 @@ await this.repo.save(aspirant);
           createdAt: now,
           updatedAt: now,
           aspirantId: 0,
-          meetingLink: 'https://instagram.com/live/demo',
-          platform: 'instagram',
-          title: 'Instagram Live - Youth Engagement',
-          description: 'Interactive session with young voters on education and employment initiatives.',
+          meetingLink: "https://instagram.com/live/demo",
+          platform: "instagram",
+          title: "Instagram Live - Youth Engagement",
+          description:
+            "Interactive session with young voters on education and employment initiatives.",
           startTime: Date.now() + 345600000,
           endTime: Date.now() + 349200000,
           completed: false,
@@ -879,10 +1177,11 @@ await this.repo.save(aspirant);
           createdAt: now,
           updatedAt: now,
           aspirantId: 0,
-          meetingLink: 'https://facebook.com/live/demo',
-          platform: 'facebook',
-          title: 'Facebook Live - Infrastructure Update',
-          description: 'Progress update on road repairs, drainage, and water supply projects.',
+          meetingLink: "https://facebook.com/live/demo",
+          platform: "facebook",
+          title: "Facebook Live - Infrastructure Update",
+          description:
+            "Progress update on road repairs, drainage, and water supply projects.",
           startTime: Date.now() + 432000000,
           endTime: Date.now() + 435600000,
           completed: false,
@@ -896,31 +1195,53 @@ await this.repo.save(aspirant);
   }
 
   private emptyRating() {
-    return { averageRating: 0, totalRatings: 0, distribution: this.emptyDistribution() };
+    return {
+      averageRating: 0,
+      totalRatings: 0,
+      distribution: this.emptyDistribution(),
+    };
   }
 
   private async getActivityRatingsBulk(aspirantIds: number[]) {
-    const emptyResult = { meetingRatings: {} as Record<number, any>, visitRatings: {} as Record<number, any>, overallRatings: {} as Record<number, any> };
+    const emptyResult = {
+      meetingRatings: {} as Record<number, any>,
+      visitRatings: {} as Record<number, any>,
+      overallRatings: {} as Record<number, any>,
+    };
     if (!aspirantIds.length) return emptyResult;
 
     // Get per-activity breakdown: type, activityId, aspirantId, rating value, count
     const distRows = await this.activityRatingRepo
-      .createQueryBuilder('r')
-      .select('r.type', 'type')
-      .addSelect('r.activityId', 'activityId')
-      .addSelect('r.aspirantId', 'aspirantId')
-      .addSelect('r.rating', 'rating')
-      .addSelect('COUNT(r.id)', 'count')
-      .where('r.aspirantId IN (:...aspirantIds)', { aspirantIds })
-      .groupBy('r.type, r.activityId, r.aspirantId, r.rating')
+      .createQueryBuilder("r")
+      .select("r.type", "type")
+      .addSelect("r.activityId", "activityId")
+      .addSelect("r.aspirantId", "aspirantId")
+      .addSelect("r.rating", "rating")
+      .addSelect("COUNT(r.id)", "count")
+      .where("r.aspirantId IN (:...aspirantIds)", { aspirantIds })
+      .groupBy("r.type, r.activityId, r.aspirantId, r.rating")
       .getRawMany();
 
     // Build per-activity rating data
-    const activityMap: Record<string, { totalRatings: number; sum: number; aspirantId: number; distribution: Record<number, number> }> = {};
+    const activityMap: Record<
+      string,
+      {
+        totalRatings: number;
+        sum: number;
+        aspirantId: number;
+        distribution: Record<number, number>;
+      }
+    > = {};
 
     for (const row of distRows) {
       const key = `${row.type}:${row.activityId}`;
-      if (!activityMap[key]) activityMap[key] = { totalRatings: 0, sum: 0, aspirantId: row.aspirantId, distribution: this.emptyDistribution() };
+      if (!activityMap[key])
+        activityMap[key] = {
+          totalRatings: 0,
+          sum: 0,
+          aspirantId: row.aspirantId,
+          distribution: this.emptyDistribution(),
+        };
       const cnt = parseInt(row.count, 10);
       activityMap[key].totalRatings += cnt;
       activityMap[key].sum += row.rating * cnt;
@@ -929,10 +1250,13 @@ await this.repo.save(aspirant);
 
     const meetingRatings: Record<number, any> = {};
     const visitRatings: Record<number, any> = {};
-    const overallSums: Record<number, { sum: number; count: number; distribution: Record<number, number> }> = {};
+    const overallSums: Record<
+      number,
+      { sum: number; count: number; distribution: Record<number, number> }
+    > = {};
 
     for (const [key, data] of Object.entries(activityMap)) {
-      const [type, activityIdStr] = key.split(':');
+      const [type, activityIdStr] = key.split(":");
       const activityId = Number(activityIdStr);
       const entry = {
         averageRating: parseFloat((data.sum / data.totalRatings).toFixed(1)),
@@ -940,21 +1264,29 @@ await this.repo.save(aspirant);
         distribution: data.distribution,
       };
 
-      if (type === 'meeting') meetingRatings[activityId] = entry;
+      if (type === "meeting") meetingRatings[activityId] = entry;
       else visitRatings[activityId] = entry;
 
-      if (!overallSums[data.aspirantId]) overallSums[data.aspirantId] = { sum: 0, count: 0, distribution: this.emptyDistribution() };
+      if (!overallSums[data.aspirantId])
+        overallSums[data.aspirantId] = {
+          sum: 0,
+          count: 0,
+          distribution: this.emptyDistribution(),
+        };
       overallSums[data.aspirantId].sum += data.sum;
       overallSums[data.aspirantId].count += data.totalRatings;
       for (const [rating, cnt] of Object.entries(data.distribution)) {
-        overallSums[data.aspirantId].distribution[Number(rating)] = (overallSums[data.aspirantId].distribution[Number(rating)] || 0) + cnt;
+        overallSums[data.aspirantId].distribution[Number(rating)] =
+          (overallSums[data.aspirantId].distribution[Number(rating)] || 0) +
+          cnt;
       }
     }
 
     const overallRatings: Record<number, any> = {};
     for (const [id, s] of Object.entries(overallSums)) {
       overallRatings[Number(id)] = {
-        averageRating: s.count > 0 ? parseFloat((s.sum / s.count).toFixed(1)) : 0,
+        averageRating:
+          s.count > 0 ? parseFloat((s.sum / s.count).toFixed(1)) : 0,
         totalRatings: s.count,
         distribution: s.distribution,
       };
@@ -964,37 +1296,58 @@ await this.repo.save(aspirant);
   }
 
   async rateMeeting(meetingId: number, voterId: number, rating: number) {
-    const meeting = await this.meetingRepo.findOne({ where: { id: meetingId } });
-    if (!meeting) throw new NotFoundException('Meeting not found');
+    const meeting = await this.meetingRepo.findOne({
+      where: { id: meetingId },
+    });
+    if (!meeting) throw new NotFoundException("Meeting not found");
 
-    let existing = await this.activityRatingRepo.findOne({ where: { type: 'meeting', activityId: meetingId, voterId } });
+    let existing = await this.activityRatingRepo.findOne({
+      where: { type: "meeting", activityId: meetingId, voterId },
+    });
     if (existing) {
       existing.rating = rating;
     } else {
-      existing = this.activityRatingRepo.create({ type: 'meeting', activityId: meetingId, aspirantId: meeting.aspirantId, voterId, rating });
+      existing = this.activityRatingRepo.create({
+        type: "meeting",
+        activityId: meetingId,
+        aspirantId: meeting.aspirantId,
+        voterId,
+        rating,
+      });
     }
     return this.activityRatingRepo.save(existing);
   }
 
   async rateVisit(visitId: number, voterId: number, rating: number) {
     const visit = await this.visitRepo.findOne({ where: { id: visitId } });
-    if (!visit) throw new NotFoundException('Visit not found');
+    if (!visit) throw new NotFoundException("Visit not found");
 
-    let existing = await this.activityRatingRepo.findOne({ where: { type: 'visit', activityId: visitId, voterId } });
+    let existing = await this.activityRatingRepo.findOne({
+      where: { type: "visit", activityId: visitId, voterId },
+    });
     if (existing) {
       existing.rating = rating;
     } else {
-      existing = this.activityRatingRepo.create({ type: 'visit', activityId: visitId, aspirantId: visit.aspirantId, voterId, rating });
+      existing = this.activityRatingRepo.create({
+        type: "visit",
+        activityId: visitId,
+        aspirantId: visit.aspirantId,
+        voterId,
+        rating,
+      });
     }
     return this.activityRatingRepo.save(existing);
   }
 
-  async getActivityRatings(type: 'meeting' | 'visit', activityId: number) {
+  async getActivityRatings(type: "meeting" | "visit", activityId: number) {
     const { avg, count } = await this.activityRatingRepo
-      .createQueryBuilder('r')
-      .select('AVG(r.rating)', 'avg')
-      .addSelect('COUNT(r.id)', 'count')
-      .where('r.type = :type AND r.activityId = :activityId', { type, activityId })
+      .createQueryBuilder("r")
+      .select("AVG(r.rating)", "avg")
+      .addSelect("COUNT(r.id)", "count")
+      .where("r.type = :type AND r.activityId = :activityId", {
+        type,
+        activityId,
+      })
       .getRawOne();
 
     return {
@@ -1005,10 +1358,10 @@ await this.repo.save(aspirant);
 
   async getAspirantOverallRating(aspirantId: number) {
     const { avg, count } = await this.activityRatingRepo
-      .createQueryBuilder('r')
-      .select('AVG(r.rating)', 'avg')
-      .addSelect('COUNT(r.id)', 'count')
-      .where('r.aspirantId = :aspirantId', { aspirantId })
+      .createQueryBuilder("r")
+      .select("AVG(r.rating)", "avg")
+      .addSelect("COUNT(r.id)", "count")
+      .where("r.aspirantId = :aspirantId", { aspirantId })
       .getRawOne();
 
     return {

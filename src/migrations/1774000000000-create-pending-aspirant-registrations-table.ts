@@ -1,6 +1,8 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class CreatePendingAspirantRegistrationsTable1774000000000 implements MigrationInterface {
+export class CreatePendingAspirantRegistrationsTable1774000000000
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
       CREATE TABLE IF NOT EXISTS "pending_aspirant_registrations" (
@@ -17,6 +19,8 @@ export class CreatePendingAspirantRegistrationsTable1774000000000 implements Mig
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`DROP TABLE IF EXISTS "pending_aspirant_registrations"`);
+    await queryRunner.query(
+      `DROP TABLE IF EXISTS "pending_aspirant_registrations"`,
+    );
   }
 }

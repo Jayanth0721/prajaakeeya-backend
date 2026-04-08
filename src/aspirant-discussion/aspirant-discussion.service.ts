@@ -1,9 +1,13 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { AspirantDiscussionMessage } from './aspirant-discussion-message.entity';
-import { CreateAspirantDiscussionMessageDto } from './dto/create-aspirant-discussion-message.dto';
-import { GetAspirantDiscussionMessagesDto } from './dto/get-aspirant-discussion-messages.dto';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { AspirantDiscussionMessage } from "./aspirant-discussion-message.entity";
+import { CreateAspirantDiscussionMessageDto } from "./dto/create-aspirant-discussion-message.dto";
+import { GetAspirantDiscussionMessagesDto } from "./dto/get-aspirant-discussion-messages.dto";
 
 @Injectable()
 export class AspirantDiscussionService {
@@ -12,10 +16,17 @@ export class AspirantDiscussionService {
     private readonly messageRepo: Repository<AspirantDiscussionMessage>,
   ) {}
 
-  async createMessage(userId: number, userRole: string, aspirantId: number, dto: CreateAspirantDiscussionMessageDto) {
+  async createMessage(
+    userId: number,
+    userRole: string,
+    aspirantId: number,
+    dto: CreateAspirantDiscussionMessageDto,
+  ) {
     // Only aspirants can send messages
-    if (userRole !== 'aspirant') {
-      throw new ForbiddenException('Only aspirants can post messages in the discussion room');
+    if (userRole !== "aspirant") {
+      throw new ForbiddenException(
+        "Only aspirants can post messages in the discussion room",
+      );
     }
     const message = this.messageRepo.create({
       content: dto.content,
@@ -25,18 +36,21 @@ export class AspirantDiscussionService {
     return this.messageRepo.save(message);
   }
 
-  async getMessages(wardNumber: string, query: GetAspirantDiscussionMessagesDto) {
+  async getMessages(
+    wardNumber: string,
+    query: GetAspirantDiscussionMessagesDto,
+  ) {
     const { page = 1, limit = 50 } = query;
     const skip = (page - 1) * limit;
 
     // Get all messages from all aspirants in this ward
     const messagesQuery = this.messageRepo
-      .createQueryBuilder('message')
-      .innerJoinAndSelect('message.user', 'user')
-      .innerJoinAndSelect('message.aspirant', 'aspirant')
-      .innerJoinAndSelect('aspirant.ward', 'ward')
-      .where('ward.number = :wardNumber', { wardNumber })
-      .orderBy('message.createdAt', 'DESC')
+      .createQueryBuilder("message")
+      .innerJoinAndSelect("message.user", "user")
+      .innerJoinAndSelect("message.aspirant", "aspirant")
+      .innerJoinAndSelect("aspirant.ward", "ward")
+      .where("ward.number = :wardNumber", { wardNumber })
+      .orderBy("message.createdAt", "DESC")
       .skip(skip)
       .take(limit);
 
@@ -79,18 +93,20 @@ export class AspirantDiscussionService {
   }
 
   async deleteMessage(messageId: number, userId: number, userRole: string) {
-    const message = await this.messageRepo.findOne({ where: { id: messageId } });
-    
+    const message = await this.messageRepo.findOne({
+      where: { id: messageId },
+    });
+
     if (!message) {
-      throw new NotFoundException('Message not found');
+      throw new NotFoundException("Message not found");
     }
 
     // Only the message author or an admin can delete
-    if (message.userId !== userId && userRole !== 'admin') {
-      throw new ForbiddenException('You can only delete your own messages');
+    if (message.userId !== userId && userRole !== "admin") {
+      throw new ForbiddenException("You can only delete your own messages");
     }
 
     await this.messageRepo.remove(message);
-    return { message: 'Message deleted successfully' };
+    return { message: "Message deleted successfully" };
   }
 }

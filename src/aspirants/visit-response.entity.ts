@@ -1,8 +1,8 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { AspirantVisit } from './aspirant-visit.entity';
+import { Column, Entity, ManyToOne } from "typeorm";
+import { BaseEntity } from "../common/base.entity";
+import { AspirantVisit } from "./aspirant-visit.entity";
 
-@Entity('visit_responses')
+@Entity("visit_responses")
 export class VisitResponse extends BaseEntity {
   @Column()
   visitId!: number;
@@ -13,6 +13,6 @@ export class VisitResponse extends BaseEntity {
   @Column()
   voterId!: number;
 
-  @Column({ type: 'boolean' })
+  @Column({ type: "boolean" })
   attending!: boolean;
 }

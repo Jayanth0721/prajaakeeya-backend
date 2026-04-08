@@ -1,5 +1,10 @@
-import { Injectable, Logger, InternalServerErrorException, BadRequestException } from '@nestjs/common';
-import axios from 'axios';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+  BadRequestException,
+} from "@nestjs/common";
+import axios from "axios";
 
 export interface SendOtpResponse {
   verificationId: string;
@@ -14,17 +19,19 @@ export interface VerifyOtpResponse {
 @Injectable()
 export class MessageCentralService {
   private readonly logger = new Logger(MessageCentralService.name);
-  private readonly baseUrl = 'https://cpaas.messagecentral.com/verification/v3';
+  private readonly baseUrl = "https://cpaas.messagecentral.com/verification/v3";
   private readonly authToken: string;
   private readonly customerId: string;
-  private readonly countryCode = '91'; // India
+  private readonly countryCode = "91"; // India
 
   constructor() {
-    this.authToken = process.env.MESSAGE_CENTRAL_AUTH_TOKEN || '';
-    this.customerId = process.env.MESSAGE_CENTRAL_CUSTOMER_ID || '';
+    this.authToken = process.env.MESSAGE_CENTRAL_AUTH_TOKEN || "";
+    this.customerId = process.env.MESSAGE_CENTRAL_CUSTOMER_ID || "";
 
     if (!this.authToken || !this.customerId) {
-      this.logger.warn('MessageCentral credentials not configured. OTP service will not work.');
+      this.logger.warn(
+        "MessageCentral credentials not configured. OTP service will not work.",
+      );
     }
   }
 
@@ -36,50 +43,55 @@ export class MessageCentralService {
   async sendOtp(mobileNumber: string): Promise<SendOtpResponse> {
     try {
       // Remove any spaces or special characters from mobile number
-      const cleanMobile = mobileNumber.replace(/\D/g, '');
-      
+      const cleanMobile = mobileNumber.replace(/\D/g, "");
+
       if (cleanMobile.length !== 10) {
-        throw new BadRequestException('Invalid mobile number format. Must be 10 digits.');
+        throw new BadRequestException(
+          "Invalid mobile number format. Must be 10 digits.",
+        );
       }
 
       const url = `${this.baseUrl}/send`;
-      
-      const response = await axios.post(
-        url,
-        null,
-        {
-          params: {
-            countryCode: this.countryCode,
-            customerId: this.customerId,
-            flowType: 'SMS',
-            mobileNumber: cleanMobile,
-          },
-          headers: {
-            'authToken': this.authToken,
-          },
-          timeout: 10000,
-        }
-      );
+
+      const response = await axios.post(url, null, {
+        params: {
+          countryCode: this.countryCode,
+          customerId: this.customerId,
+          flowType: "SMS",
+          mobileNumber: cleanMobile,
+        },
+        headers: {
+          authToken: this.authToken,
+        },
+        timeout: 10000,
+      });
 
       this.logger.log(`OTP sent successfully to ${cleanMobile}`);
-      
+
       // MessageCentral returns verificationId in response
-      const verificationId = response.data?.data?.verificationId || response.data?.verificationId;
-      
+      const verificationId =
+        response.data?.data?.verificationId || response.data?.verificationId;
+
       if (!verificationId) {
-        this.logger.error('No verificationId received from MessageCentral', response.data);
-        throw new InternalServerErrorException('Failed to send OTP');
+        this.logger.error(
+          "No verificationId received from MessageCentral",
+          response.data,
+        );
+        throw new InternalServerErrorException("Failed to send OTP");
       }
 
       return {
         verificationId,
-        message: 'OTP sent successfully',
+        message: "OTP sent successfully",
       };
     } catch (error: any) {
-      this.logger.error(`Failed to send OTP to ${mobileNumber}:`, error.message);
-      
+      this.logger.error(
+        `Failed to send OTP to ${mobileNumber}:`,
+        error.message,
+      );
+
       if (error.response) {
-        this.logger.error('MessageCentral API Error:', {
+        this.logger.error("MessageCentral API Error:", {
           status: error.response.status,
           data: error.response.data,
         });
@@ -87,23 +99,41 @@ export class MessageCentralService {
 
       // Handle specific MessageCentral error for insufficient credits
       const respData = error.response?.data;
-      const mcMessage = respData?.data?.message || respData?.message || respData?.data?.errorMessage;
+      const mcMessage =
+        respData?.data?.message ||
+        respData?.message ||
+        respData?.data?.errorMessage;
       const mcCode = respData?.data?.responseCode || respData?.responseCode;
 
-      if (mcCode === 508 || (typeof mcMessage === 'string' && mcMessage.toLowerCase().includes('insufficient credit'))) {
+      if (
+        mcCode === 508 ||
+        (typeof mcMessage === "string" &&
+          mcMessage.toLowerCase().includes("insufficient credit"))
+      ) {
         // Bubble up a client error so controllers can return 400 with a clear message
-        throw new BadRequestException('OTP credit limit reached');
+        throw new BadRequestException("OTP credit limit reached");
       }
 
       // Handle case where an OTP request already exists for the number (MessageCentral returns responseCode 506)
-      if (mcCode === 506 || mcMessage === 'REQUEST_ALREADY_EXISTS' || (typeof mcMessage === 'string' && mcMessage.toLowerCase().includes('request_already_exists'))) {
+      if (
+        mcCode === 506 ||
+        mcMessage === "REQUEST_ALREADY_EXISTS" ||
+        (typeof mcMessage === "string" &&
+          mcMessage.toLowerCase().includes("request_already_exists"))
+      ) {
         // Try to extract the existing verificationId from the response and return it instead of failing
-        const existingVerificationId = respData?.data?.verificationId || respData?.data?.transactionId || respData?.verificationId;
+        const existingVerificationId =
+          respData?.data?.verificationId ||
+          respData?.data?.transactionId ||
+          respData?.verificationId;
         if (existingVerificationId) {
-          this.logger.log(`OTP request already exists for ${mobileNumber}; returning existing verificationId ${existingVerificationId}`);
+          this.logger.log(
+            `OTP request already exists for ${mobileNumber}; returning existing verificationId ${existingVerificationId}`,
+          );
           return {
             verificationId: existingVerificationId,
-            message: 'OTP request already exists; returning existing verificationId',
+            message:
+              "OTP request already exists; returning existing verificationId",
           };
         }
         // If no verificationId present, fall through to generic error handling below
@@ -113,7 +143,9 @@ export class MessageCentralService {
         throw error;
       }
 
-      throw new InternalServerErrorException('Failed to send OTP. Please try again.');
+      throw new InternalServerErrorException(
+        "Failed to send OTP. Please try again.",
+      );
     }
   }
 
@@ -131,18 +163,20 @@ export class MessageCentralService {
   ): Promise<VerifyOtpResponse> {
     try {
       // Remove any spaces or special characters from mobile number
-      const cleanMobile = mobileNumber.replace(/\D/g, '');
-      
+      const cleanMobile = mobileNumber.replace(/\D/g, "");
+
       if (cleanMobile.length !== 10) {
-        throw new BadRequestException('Invalid mobile number format. Must be 10 digits.');
+        throw new BadRequestException(
+          "Invalid mobile number format. Must be 10 digits.",
+        );
       }
 
       if (!code || code.length < 4) {
-        throw new BadRequestException('Invalid OTP code.');
+        throw new BadRequestException("Invalid OTP code.");
       }
 
       const url = `${this.baseUrl}/validateOtp`;
-      
+
       const response = await axios.get(url, {
         params: {
           countryCode: this.countryCode,
@@ -152,34 +186,38 @@ export class MessageCentralService {
           code,
         },
         headers: {
-          'authToken': this.authToken,
+          authToken: this.authToken,
         },
         timeout: 10000,
       });
 
       // Check if verification was successful
-      const isVerified = response.data?.data?.verificationStatus === 'VERIFICATION_COMPLETED' 
-        || response.data?.verificationStatus === 'VERIFICATION_COMPLETED'
-        || response.data?.responseCode === 200;
+      const isVerified =
+        response.data?.data?.verificationStatus === "VERIFICATION_COMPLETED" ||
+        response.data?.verificationStatus === "VERIFICATION_COMPLETED" ||
+        response.data?.responseCode === 200;
 
       if (isVerified) {
         this.logger.log(`OTP verified successfully for ${cleanMobile}`);
         return {
           verified: true,
-          message: 'OTP verified successfully',
+          message: "OTP verified successfully",
         };
       } else {
         this.logger.warn(`OTP verification failed for ${cleanMobile}`);
         return {
           verified: false,
-          message: 'Invalid OTP',
+          message: "Invalid OTP",
         };
       }
     } catch (error: any) {
-      this.logger.error(`Failed to verify OTP for ${mobileNumber}:`, error.message);
-      
+      this.logger.error(
+        `Failed to verify OTP for ${mobileNumber}:`,
+        error.message,
+      );
+
       if (error.response) {
-        this.logger.error('MessageCentral API Error:', {
+        this.logger.error("MessageCentral API Error:", {
           status: error.response.status,
           data: error.response.data,
         });
@@ -192,7 +230,7 @@ export class MessageCentralService {
       // Return failed verification instead of throwing error for invalid OTPs
       return {
         verified: false,
-        message: 'Invalid OTP',
+        message: "Invalid OTP",
       };
     }
   }

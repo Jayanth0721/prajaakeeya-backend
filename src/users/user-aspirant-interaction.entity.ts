@@ -1,10 +1,10 @@
-import { Column, Entity, ManyToOne, Unique } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { User } from './user.entity';
-import { Aspirant } from '../aspirants/aspirant.entity';
+import { Column, Entity, ManyToOne, Unique } from "typeorm";
+import { BaseEntity } from "../common/base.entity";
+import { User } from "./user.entity";
+import { Aspirant } from "../aspirants/aspirant.entity";
 
-@Entity('user_aspirant_interactions')
-@Unique(['userId', 'aspirantId'])
+@Entity("user_aspirant_interactions")
+@Unique(["userId", "aspirantId"])
 export class UserAspirantInteraction extends BaseEntity {
   @Column()
   userId!: number;

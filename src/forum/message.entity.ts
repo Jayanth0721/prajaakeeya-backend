@@ -1,24 +1,24 @@
-import { Column, Entity, ManyToOne, JoinColumn } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { User } from '../users/user.entity';
-import { Ward } from '../wards/ward.entity';
+import { Column, Entity, ManyToOne, JoinColumn } from "typeorm";
+import { BaseEntity } from "../common/base.entity";
+import { User } from "../users/user.entity";
+import { Ward } from "../wards/ward.entity";
 
-@Entity('messages')
+@Entity("messages")
 export class Message extends BaseEntity {
-  @Column({ type: 'text' })
+  @Column({ type: "text" })
   content!: string;
 
-  @Column({ name: 'user_id' })
+  @Column({ name: "user_id" })
   userId!: number;
 
   @ManyToOne(() => User, { eager: true })
-  @JoinColumn({ name: 'user_id' })
+  @JoinColumn({ name: "user_id" })
   user!: User;
 
-  @Column({ name: 'ward_id' })
+  @Column({ name: "ward_id" })
   wardId!: number;
 
   @ManyToOne(() => Ward)
-  @JoinColumn({ name: 'ward_id' })
+  @JoinColumn({ name: "ward_id" })
   ward!: Ward;
 }

@@ -1,15 +1,17 @@
-import { MigrationInterface, QueryRunner, TableColumn } from 'typeorm';
+import { MigrationInterface, QueryRunner, TableColumn } from "typeorm";
 
-export class AddVerificationIdToOtps1739112000000 implements MigrationInterface {
+export class AddVerificationIdToOtps1739112000000
+  implements MigrationInterface
+{
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Add verificationId column to otps table
     await queryRunner.addColumn(
-      'otps',
+      "otps",
       new TableColumn({
-        name: 'verificationId',
-        type: 'varchar',
+        name: "verificationId",
+        type: "varchar",
         isNullable: true,
-      })
+      }),
     );
 
     // Update OtpPurpose enum to include 'login' and 'vote'
@@ -17,7 +19,7 @@ export class AddVerificationIdToOtps1739112000000 implements MigrationInterface 
       ALTER TABLE otps 
       DROP CONSTRAINT IF EXISTS "CHK_otps_purpose";
     `);
-    
+
     await queryRunner.query(`
       ALTER TABLE otps 
       ADD CONSTRAINT "CHK_otps_purpose" 
@@ -40,6 +42,6 @@ export class AddVerificationIdToOtps1739112000000 implements MigrationInterface 
     `);
 
     // Drop verificationId column
-    await queryRunner.dropColumn('otps', 'verificationId');
+    await queryRunner.dropColumn("otps", "verificationId");
   }
 }

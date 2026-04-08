@@ -1,5 +1,10 @@
-import { Injectable, Logger, InternalServerErrorException, BadRequestException } from '@nestjs/common';
-import { SESClient, SendEmailCommand } from '@aws-sdk/client-ses';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+  BadRequestException,
+} from "@nestjs/common";
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 
 export interface SendOtpResponse {
   verificationId: string;
@@ -16,16 +21,26 @@ export class SESService {
   private readonly logger = new Logger(SESService.name);
   private readonly sesClient: SESClient;
   private readonly fromEmail: string;
-  private readonly otpStore = new Map<string, { otp: string; expiresAt: Date }>();
+  private readonly otpStore = new Map<
+    string,
+    { otp: string; expiresAt: Date }
+  >();
 
   constructor() {
-    const accessKeyId = process.env.AWS_SES_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || '';
-    const secretAccessKey = process.env.AWS_SES_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY || '';
-    const region = process.env.AWS_SES_REGION || process.env.AWS_REGION || 'ap-south-1';
-    this.fromEmail = process.env.AWS_SES_FROM_EMAIL || 'noreply@example.com';
+    const accessKeyId =
+      process.env.AWS_SES_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID || "";
+    const secretAccessKey =
+      process.env.AWS_SES_SECRET_ACCESS_KEY ||
+      process.env.AWS_SECRET_ACCESS_KEY ||
+      "";
+    const region =
+      process.env.AWS_SES_REGION || process.env.AWS_REGION || "ap-south-1";
+    this.fromEmail = process.env.AWS_SES_FROM_EMAIL || "noreply@example.com";
 
     if (!accessKeyId || !secretAccessKey) {
-      this.logger.warn('AWS SES credentials not configured. Email service will not work.');
+      this.logger.warn(
+        "AWS SES credentials not configured. Email service will not work.",
+      );
     }
 
     this.sesClient = new SESClient({
@@ -48,7 +63,10 @@ export class SESService {
    * Generate a unique verification ID
    */
   private generateVerificationId(): string {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    return (
+      Math.random().toString(36).substring(2, 15) +
+      Math.random().toString(36).substring(2, 15)
+    );
   }
 
   /**
@@ -61,12 +79,12 @@ export class SESService {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        throw new BadRequestException('Invalid email format');
+        throw new BadRequestException("Invalid email format");
       }
 
       const otp = this.generateOtp();
       const verificationId = this.generateVerificationId();
-      
+
       // Store OTP temporarily (expires in 10 minutes)
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
       this.otpStore.set(verificationId, { otp, expiresAt });
@@ -78,8 +96,8 @@ export class SESService {
         },
         Message: {
           Subject: {
-            Data: 'Your OTP Code',
-            Charset: 'UTF-8',
+            Data: "Your OTP Code",
+            Charset: "UTF-8",
           },
           Body: {
             Html: {
@@ -93,11 +111,11 @@ export class SESService {
                   </body>
                 </html>
               `,
-              Charset: 'UTF-8',
+              Charset: "UTF-8",
             },
             Text: {
               Data: `Your OTP code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you did not request this code, please ignore this email.`,
-              Charset: 'UTF-8',
+              Charset: "UTF-8",
             },
           },
         },
@@ -110,7 +128,7 @@ export class SESService {
 
       return {
         verificationId,
-        message: 'OTP sent successfully to your email',
+        message: "OTP sent successfully to your email",
       };
     } catch (error: any) {
       this.logger.error(`Failed to send OTP to ${email}:`, error.message);
@@ -119,7 +137,7 @@ export class SESService {
         throw error;
       }
 
-      throw new InternalServerErrorException('Failed to send OTP email');
+      throw new InternalServerErrorException("Failed to send OTP email");
     }
   }
 
@@ -130,34 +148,38 @@ export class SESService {
    * @param otp - OTP code to verify
    * @returns verification result
    */
-  async verifyOtp(email: string, verificationId: string, otp: string): Promise<VerifyOtpResponse> {
+  async verifyOtp(
+    email: string,
+    verificationId: string,
+    otp: string,
+  ): Promise<VerifyOtpResponse> {
     try {
       const stored = this.otpStore.get(verificationId);
 
       if (!stored) {
         this.logger.warn(`Verification ID not found: ${verificationId}`);
-        return { verified: false, message: 'Invalid or expired OTP' };
+        return { verified: false, message: "Invalid or expired OTP" };
       }
 
       if (stored.expiresAt < new Date()) {
         this.otpStore.delete(verificationId);
         this.logger.warn(`OTP expired for: ${email}`);
-        return { verified: false, message: 'OTP has expired' };
+        return { verified: false, message: "OTP has expired" };
       }
 
       if (stored.otp !== otp) {
         this.logger.warn(`OTP mismatch for: ${email}`);
-        return { verified: false, message: 'Invalid OTP' };
+        return { verified: false, message: "Invalid OTP" };
       }
 
       // OTP verified, remove from store
       this.otpStore.delete(verificationId);
       this.logger.log(`OTP verified successfully for: ${email}`);
 
-      return { verified: true, message: 'OTP verified successfully' };
+      return { verified: true, message: "OTP verified successfully" };
     } catch (error: any) {
       this.logger.error(`Failed to verify OTP for ${email}:`, error.message);
-      throw new InternalServerErrorException('Failed to verify OTP');
+      throw new InternalServerErrorException("Failed to verify OTP");
     }
   }
 

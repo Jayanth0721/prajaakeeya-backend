@@ -1,42 +1,57 @@
-import { Injectable, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { S3Service } from '../common/services/s3.service';
-import { User } from './user.entity';
-import { Report } from './report.entity';
-import { UserSignedDocument } from './user-signed-document.entity';
-import { CreateReportDto } from './dto/create-report.dto';
-import { CreateUserByEpicDto } from './dto/create-user-by-epic.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { WardsService } from '../wards/wards.service';
-import { Vote } from '../votes/vote.entity';
-import { Message } from '../forum/message.entity';
-import { AspirantMessage } from '../aspirants/aspirant-message.entity';
-import { AspirantDiscussionMessage } from '../aspirant-discussion/aspirant-discussion-message.entity';
-import { Aspirant } from '../aspirants/aspirant.entity';
-import { AspirantBooking } from '../aspirants/aspirant-booking.entity';
-import { VisitResponse } from '../aspirants/visit-response.entity';
-import { WardMeeting } from '../wards/ward-meeting.entity';
-import { UserAspirantInteraction } from './user-aspirant-interaction.entity';
-import axios from 'axios';
-import * as https from 'https';
-import { profile } from 'console';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+  forwardRef,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository, DataSource } from "typeorm";
+import { S3Service } from "../common/services/s3.service";
+import { User } from "./user.entity";
+import { Report } from "./report.entity";
+import { UserSignedDocument } from "./user-signed-document.entity";
+import { CreateReportDto } from "./dto/create-report.dto";
+import { CreateUserByEpicDto } from "./dto/create-user-by-epic.dto";
+import { UpdateUserDto } from "./dto/update-user.dto";
+import { WardsService } from "../wards/wards.service";
+import { Vote } from "../votes/vote.entity";
+import { Message } from "../forum/message.entity";
+import { AspirantMessage } from "../aspirants/aspirant-message.entity";
+import { AspirantDiscussionMessage } from "../aspirant-discussion/aspirant-discussion-message.entity";
+import { Aspirant } from "../aspirants/aspirant.entity";
+import { AspirantBooking } from "../aspirants/aspirant-booking.entity";
+import { VisitResponse } from "../aspirants/visit-response.entity";
+import { WardMeeting } from "../wards/ward-meeting.entity";
+import { UserAspirantInteraction } from "./user-aspirant-interaction.entity";
+import axios from "axios";
+import * as https from "https";
+import { profile } from "console";
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User) private readonly repo: Repository<User>,
     @InjectRepository(Report) private readonly reportRepo: Repository<Report>,
-    @InjectRepository(UserSignedDocument) private readonly userSignedDocRepo: Repository<UserSignedDocument>,
-    @InjectRepository(UserAspirantInteraction) private readonly userAspirantInteractionRepo: Repository<UserAspirantInteraction>,
+    @InjectRepository(UserSignedDocument)
+    private readonly userSignedDocRepo: Repository<UserSignedDocument>,
+    @InjectRepository(UserAspirantInteraction)
+    private readonly userAspirantInteractionRepo: Repository<UserAspirantInteraction>,
     @InjectRepository(Vote) private readonly voteRepo: Repository<Vote>,
-    @InjectRepository(Message) private readonly messageRepo: Repository<Message>,
-    @InjectRepository(AspirantMessage) private readonly aspirantMessageRepo: Repository<AspirantMessage>,
-    @InjectRepository(AspirantDiscussionMessage) private readonly aspirantDiscussionMessageRepo: Repository<AspirantDiscussionMessage>,
-    @InjectRepository(Aspirant) private readonly aspirantRepo: Repository<Aspirant>,
-    @InjectRepository(AspirantBooking) private readonly aspirantBookingRepo: Repository<AspirantBooking>,
-    @InjectRepository(VisitResponse) private readonly visitResponseRepo: Repository<VisitResponse>,
-    @InjectRepository(WardMeeting) private readonly wardMeetingRepo: Repository<WardMeeting>,
+    @InjectRepository(Message)
+    private readonly messageRepo: Repository<Message>,
+    @InjectRepository(AspirantMessage)
+    private readonly aspirantMessageRepo: Repository<AspirantMessage>,
+    @InjectRepository(AspirantDiscussionMessage)
+    private readonly aspirantDiscussionMessageRepo: Repository<AspirantDiscussionMessage>,
+    @InjectRepository(Aspirant)
+    private readonly aspirantRepo: Repository<Aspirant>,
+    @InjectRepository(AspirantBooking)
+    private readonly aspirantBookingRepo: Repository<AspirantBooking>,
+    @InjectRepository(VisitResponse)
+    private readonly visitResponseRepo: Repository<VisitResponse>,
+    @InjectRepository(WardMeeting)
+    private readonly wardMeetingRepo: Repository<WardMeeting>,
     private readonly wardsService: WardsService,
     private readonly dataSource: DataSource,
     private readonly s3Service: S3Service,
@@ -48,7 +63,7 @@ export class UsersService {
 
   async getLastInteractionMessage(userId: number): Promise<string | null> {
     const user = await this.repo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException("User not found");
     return user.lastInteractionMessage || null;
   }
 
@@ -61,13 +76,15 @@ export class UsersService {
   }
 
   findByEpic(epic: string) {
-    return this.repo.findOne({ where: [{ epicId: epic }, { voterEpic: epic }] });
+    return this.repo.findOne({
+      where: [{ epicId: epic }, { voterEpic: epic }],
+    });
   }
 
   async upsertOtp(phone: string, otp: string) {
     const user = await this.repo.findOne({ where: { phone } });
     if (!user) {
-      throw new NotFoundException('User not registered');
+      throw new NotFoundException("User not registered");
     }
     user.lastOtp = otp;
     await this.repo.save(user);
@@ -93,7 +110,7 @@ export class UsersService {
   }) {
     let user = await this.repo.findOne({ where: { phone: payload.phone } });
     if (!user) {
-      user = this.repo.create({ phone: payload.phone, role: 'voter' });
+      user = this.repo.create({ phone: payload.phone, role: "voter" });
     }
     user.name = payload.name;
     user.relativeName = payload.relativeName;
@@ -103,13 +120,13 @@ export class UsersService {
     return this.repo.save(user);
   }
 
-  async upsertAdmin(email: string, name = 'Admin User', password?: string) {
+  async upsertAdmin(email: string, name = "Admin User", password?: string) {
     let user = await this.repo.findOne({ where: { email } });
     if (!user) {
-      user = this.repo.create({ email, role: 'admin' });
+      user = this.repo.create({ email, role: "admin" });
     }
     user.name = name;
-    user.role = 'admin';
+    user.role = "admin";
 
     // Clear voter-specific fields for admin users
     user.epicId = undefined;
@@ -130,9 +147,9 @@ export class UsersService {
 
     // If password is provided, hash and set it
     if (password) {
-      const crypto = await import('crypto');
-      const salt = crypto.randomBytes(16).toString('hex');
-      const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+      const crypto = await import("crypto");
+      const salt = crypto.randomBytes(16).toString("hex");
+      const hash = crypto.scryptSync(password, salt, 64).toString("hex");
       user.passwordSalt = salt;
       user.passwordHash = hash;
     }
@@ -140,9 +157,9 @@ export class UsersService {
     return this.repo.save(user);
   }
 
-  async setRole(userId: number, role: 'admin' | 'voter' | 'aspirant') {
+  async setRole(userId: number, role: "admin" | "voter" | "aspirant") {
     const user = await this.repo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException("User not found");
     user.role = role;
     return this.repo.save(user);
   }
@@ -154,25 +171,29 @@ export class UsersService {
 
   async findAllVoters(page: number, limit: number, search?: string) {
     const qb = this.repo
-      .createQueryBuilder('user')
-      .leftJoinAndSelect('user.ward', 'ward')
-      .where('user.role IN (:...roles)', { roles: ['voter', 'aspirant'] });
+      .createQueryBuilder("user")
+      .leftJoinAndSelect("user.ward", "ward")
+      .where("user.role IN (:...roles)", { roles: ["voter", "aspirant"] });
 
     if (search) {
-      qb.andWhere('LOWER(user.name) LIKE :search', { search: `%${search.toLowerCase()}%` });
+      qb.andWhere("LOWER(user.name) LIKE :search", {
+        search: `%${search.toLowerCase()}%`,
+      });
     }
 
     const [users, total] = await qb
-      .orderBy('user.name', 'ASC')
+      .orderBy("user.name", "ASC")
       .skip((page - 1) * limit)
       .take(limit)
       .getManyAndCount();
 
-    const totalUsers = await this.repo.count({ where: [{ role: 'voter' as any }, { role: 'aspirant' as any }] });
+    const totalUsers = await this.repo.count({
+      where: [{ role: "voter" as any }, { role: "aspirant" as any }],
+    });
 
     return {
       totalUsers,
-      data: users.map(u => ({
+      data: users.map((u) => ({
         id: u.id,
         name: u.name,
         profilePicture: u.profilePicture,
@@ -187,8 +208,12 @@ export class UsersService {
         wardNameL1: u.wardNameL1,
         psName: u.psName,
         psNameL1: u.psNameL1,
-        psLong: u.psLong !== undefined && u.psLong !== null ? String(u.psLong) : u.psLong,
-        psLat: u.psLat !== undefined && u.psLat !== null ? String(u.psLat) : u.psLat,
+        psLong:
+          u.psLong !== undefined && u.psLong !== null
+            ? String(u.psLong)
+            : u.psLong,
+        psLat:
+          u.psLat !== undefined && u.psLat !== null ? String(u.psLat) : u.psLat,
         ward: u.ward
           ? {
               id: u.ward.id,
@@ -211,28 +236,39 @@ export class UsersService {
     };
   }
 
-  async createReport(createReportDto: CreateReportDto, reportedById?: number, file?: Express.Multer.File) {
+  async createReport(
+    createReportDto: CreateReportDto,
+    reportedById?: number,
+    file?: Express.Multer.File,
+  ) {
     // Check if reported user exists
     const reportedUser = await this.repo.findOne({
-      where: { id: createReportDto.reportedUserId }
+      where: { id: createReportDto.reportedUserId },
     });
-    
+
     if (!reportedUser) {
-      throw new NotFoundException('Reported user not found');
+      throw new NotFoundException("Reported user not found");
     }
 
     // Validate file type if provided
     if (file) {
-      const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+      const allowedMimeTypes = [
+        "application/pdf",
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+      ];
       if (!allowedMimeTypes.includes(file.mimetype)) {
-        throw new BadRequestException('Only PDF, JPEG, and PNG files are allowed');
+        throw new BadRequestException(
+          "Only PDF, JPEG, and PNG files are allowed",
+        );
       }
     }
 
     // Upload file to S3 if provided
     let attachmentUrl: string | undefined;
     if (file) {
-      attachmentUrl = await this.s3Service.uploadFile(file, 'reports');
+      attachmentUrl = await this.s3Service.uploadFile(file, "reports");
     }
 
     // Create the report
@@ -242,7 +278,7 @@ export class UsersService {
       reason: createReportDto.reason,
       ...(reportedById && { reportedById }),
       ...(attachmentUrl && { attachmentUrl }),
-      status: 'pending'
+      status: "pending",
     });
 
     return this.reportRepo.save(report);
@@ -250,14 +286,14 @@ export class UsersService {
 
   async getAllReports(status?: string) {
     const queryBuilder = this.reportRepo
-      .createQueryBuilder('report')
-      .leftJoinAndSelect('report.reportedUser', 'reportedUser')
-      .leftJoinAndSelect('report.reportedBy', 'reportedBy')
-      .leftJoinAndSelect('report.resolvedBy', 'resolvedBy')
-      .orderBy('report.createdAt', 'DESC');
+      .createQueryBuilder("report")
+      .leftJoinAndSelect("report.reportedUser", "reportedUser")
+      .leftJoinAndSelect("report.reportedBy", "reportedBy")
+      .leftJoinAndSelect("report.resolvedBy", "resolvedBy")
+      .orderBy("report.createdAt", "DESC");
 
     if (status) {
-      queryBuilder.where('report.status = :status', { status });
+      queryBuilder.where("report.status = :status", { status });
     }
 
     return queryBuilder.getMany();
@@ -265,15 +301,15 @@ export class UsersService {
 
   async getReportById(id: number) {
     const report = await this.reportRepo
-      .createQueryBuilder('report')
-      .leftJoinAndSelect('report.reportedUser', 'reportedUser')
-      .leftJoinAndSelect('report.reportedBy', 'reportedBy')
-      .leftJoinAndSelect('report.resolvedBy', 'resolvedBy')
-      .where('report.id = :id', { id })
+      .createQueryBuilder("report")
+      .leftJoinAndSelect("report.reportedUser", "reportedUser")
+      .leftJoinAndSelect("report.reportedBy", "reportedBy")
+      .leftJoinAndSelect("report.resolvedBy", "resolvedBy")
+      .where("report.id = :id", { id })
       .getOne();
 
     if (!report) {
-      throw new NotFoundException('Report not found');
+      throw new NotFoundException("Report not found");
     }
 
     return report;
@@ -281,31 +317,31 @@ export class UsersService {
 
   async getReportsByUser(userId: number) {
     return this.reportRepo
-      .createQueryBuilder('report')
-      .leftJoinAndSelect('report.reportedUser', 'reportedUser')
-      .where('report.reportedById = :userId', { userId })
-      .orderBy('report.createdAt', 'DESC')
+      .createQueryBuilder("report")
+      .leftJoinAndSelect("report.reportedUser", "reportedUser")
+      .where("report.reportedById = :userId", { userId })
+      .orderBy("report.createdAt", "DESC")
       .getMany();
   }
 
   async updateReportStatus(
     id: number,
-    status: 'pending' | 'resolved' | 'rejected',
+    status: "pending" | "resolved" | "rejected",
     adminNotes?: string,
-    resolvedById?: number
+    resolvedById?: number,
   ) {
     const report = await this.reportRepo.findOne({ where: { id } });
-    
+
     if (!report) {
-      throw new NotFoundException('Report not found');
+      throw new NotFoundException("Report not found");
     }
 
     report.status = status;
     if (adminNotes) {
       report.adminNotes = adminNotes;
     }
-    
-    if (status === 'resolved' || status === 'rejected') {
+
+    if (status === "resolved" || status === "rejected") {
       report.resolvedAt = new Date();
       if (resolvedById) {
         report.resolvedById = resolvedById;
@@ -320,15 +356,19 @@ export class UsersService {
     // Check if user with phone already exists
     const existing = await this.repo.findOne({ where: { phone: dto.phone } });
     if (existing) {
-      throw new BadRequestException('User with this phone number already exists');
+      throw new BadRequestException(
+        "User with this phone number already exists",
+      );
     }
 
     // Check if user with EPIC already exists
     const epicNormalized = dto.epicNumber?.trim();
     if (epicNormalized) {
-      const existingEpic = await this.repo.findOne({ where: [{ epicId: epicNormalized }, { voterEpic: epicNormalized }] });
+      const existingEpic = await this.repo.findOne({
+        where: [{ epicId: epicNormalized }, { voterEpic: epicNormalized }],
+      });
       if (existingEpic) {
-        throw new BadRequestException('User with this EPIC already exists');
+        throw new BadRequestException("User with this EPIC already exists");
       }
     }
 
@@ -336,21 +376,21 @@ export class UsersService {
     let voterData: any;
     try {
       const response = await axios.post(
-        'https://electoralapi.bbmpgov.in/searchby-epic',
+        "https://electoralapi.bbmpgov.in/searchby-epic",
         { epic_no: dto.epicNumber },
         {
-          headers: { 'Content-Type': 'application/json' },
+          headers: { "Content-Type": "application/json" },
           timeout: 10000,
           httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-        }
+        },
       );
       voterData = response.data;
-      
+
       // Log the response for debugging
-      console.log('Electoral API Response:', voterData);
+      console.log("Electoral API Response:", voterData);
     } catch (error: any) {
       throw new BadRequestException({
-        message: 'Failed to fetch voter details from electoral API',
+        message: "Failed to fetch voter details from electoral API",
         details: error.response?.data,
       });
     }
@@ -365,7 +405,7 @@ export class UsersService {
 
     const voter = extractFirst(voterData);
     if (!voter) {
-      throw new NotFoundException('Voter not found in electoral records');
+      throw new NotFoundException("Voter not found in electoral records");
     }
 
     // Find ward by name from electoral API (same as registerVoter)
@@ -384,9 +424,9 @@ export class UsersService {
     // Create user from electoral data (matching registerVoter field mapping)
     const user = this.repo.create({
       phone: dto.phone,
-      role: dto.role || 'voter',
+      role: dto.role || "voter",
       name: voter?.name_en,
-      relativeName: voter?.rln_name_en || '',
+      relativeName: voter?.rln_name_en || "",
       epicId: voter?.voter_epic || dto.epicNumber,
       gender: voter?.gender,
       wardId,
@@ -407,62 +447,72 @@ export class UsersService {
   }
 
   async getAllUsers(wardId?: number): Promise<User[]> {
-    const query = this.repo.createQueryBuilder('user')
-      .leftJoinAndSelect('user.ward', 'ward')
-      .orderBy('user.createdAt', 'DESC');
+    const query = this.repo
+      .createQueryBuilder("user")
+      .leftJoinAndSelect("user.ward", "ward")
+      .orderBy("user.createdAt", "DESC");
 
     if (wardId) {
-      query.where('user.wardId = :wardId', { wardId });
+      query.where("user.wardId = :wardId", { wardId });
     }
 
     return query.getMany();
   }
 
   async voterCounts(wardIds?: number[]) {
-    const qb = this.repo.createQueryBuilder('user')
-      .select('user.wardId', 'wardId')
-      .addSelect("COUNT(user.id)", 'total')
-      .where('user.role = :role', { role: 'voter' })
-      .groupBy('user.wardId');
+    const qb = this.repo
+      .createQueryBuilder("user")
+      .select("user.wardId", "wardId")
+      .addSelect("COUNT(user.id)", "total")
+      .where("user.role = :role", { role: "voter" })
+      .groupBy("user.wardId");
 
-    if (wardIds?.length) qb.andWhere('user.wardId IN (:...wardIds)', { wardIds });
+    if (wardIds?.length)
+      qb.andWhere("user.wardId IN (:...wardIds)", { wardIds });
 
     const rows = await qb.getRawMany();
-    return rows.map((row) => ({ wardId: Number(row.wardId), total: Number(row.total) }));
+    return rows.map((row) => ({
+      wardId: Number(row.wardId),
+      total: Number(row.total),
+    }));
   }
 
   async getUserById(id: number): Promise<User> {
-    const user = await this.repo.findOne({ 
+    const user = await this.repo.findOne({
       where: { id },
-      relations: ['ward']
+      relations: ["ward"],
     });
-    
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
-    
+
     return user;
   }
 
   async updateUser(id: number, dto: UpdateUserDto): Promise<User> {
     const user = await this.repo.findOne({ where: { id } });
-    
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     // Update fields
     if (dto.name !== undefined) user.name = dto.name;
     if (dto.phone !== undefined) {
       if (dto.phone) {
-        const existing = await this.repo.findOne({ where: { phone: dto.phone } });
+        const existing = await this.repo.findOne({
+          where: { phone: dto.phone },
+        });
         if (existing && existing.id !== id) {
-          throw new BadRequestException('Phone already in use');
+          throw new BadRequestException("Phone already in use");
         }
       }
       user.phone = dto.phone;
       // Sync phone to aspirant profile if user is an aspirant
-      const aspirant = await this.aspirantRepo.findOne({ where: { userId: id } });
+      const aspirant = await this.aspirantRepo.findOne({
+        where: { userId: id },
+      });
       if (aspirant) {
         aspirant.phone = dto.phone;
         await this.aspirantRepo.save(aspirant);
@@ -475,16 +525,17 @@ export class UsersService {
     if (dto.wardId !== undefined) user.wardId = dto.wardId;
     if (dto.role !== undefined) user.role = dto.role;
     if (dto.isBlocked !== undefined) user.isBlocked = dto.isBlocked;
-    if (dto.profilePicture !== undefined) user.profilePicture = dto.profilePicture;
+    if (dto.profilePicture !== undefined)
+      user.profilePicture = dto.profilePicture;
 
     return this.repo.save(user);
   }
 
   async blockUser(id: number): Promise<User> {
     const user = await this.repo.findOne({ where: { id } });
-    
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     user.isBlocked = true;
@@ -493,9 +544,9 @@ export class UsersService {
 
   async unblockUser(id: number): Promise<User> {
     const user = await this.repo.findOne({ where: { id } });
-    
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     user.isBlocked = false;
@@ -504,9 +555,9 @@ export class UsersService {
 
   async deleteUser(id: number): Promise<void> {
     const user = await this.repo.findOne({ where: { id } });
-    
+
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new NotFoundException("User not found");
     }
 
     // Use transaction to ensure all deletions happen atomically
@@ -543,10 +594,18 @@ export class UsersService {
 
       // Handle reports: Delete reports where user is the reported user
       await manager.delete(Report, { reportedUserId: id });
-      
+
       // Update reports where user is the reporter or resolver (set to null)
-      await manager.update(Report, { reportedById: id }, { reportedById: null as any });
-      await manager.update(Report, { resolvedById: id }, { resolvedById: null as any });
+      await manager.update(
+        Report,
+        { reportedById: id },
+        { reportedById: null as any },
+      );
+      await manager.update(
+        Report,
+        { resolvedById: id },
+        { resolvedById: null as any },
+      );
 
       // Finally, delete the user
       await manager.remove(user);
@@ -556,28 +615,37 @@ export class UsersService {
   async getUsersByWard(wardId: number): Promise<User[]> {
     return this.repo.find({
       where: { wardId },
-      relations: ['ward'],
-      order: { createdAt: 'DESC' }
+      relations: ["ward"],
+      order: { createdAt: "DESC" },
     });
   }
 
   // Interaction tracking methods
-  async trackChat(userId: number, aspirantId: number): Promise<{ user: User; message: string }> {
+  async trackChat(
+    userId: number,
+    aspirantId: number,
+  ): Promise<{ user: User; message: string }> {
     const user = await this.repo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    
-    const aspirant = await this.aspirantRepo.findOne({ where: { id: aspirantId } });
-    if (!aspirant) throw new NotFoundException('Aspirant not found');
+    if (!user) throw new NotFoundException("User not found");
+
+    const aspirant = await this.aspirantRepo.findOne({
+      where: { id: aspirantId },
+    });
+    if (!aspirant) throw new NotFoundException("Aspirant not found");
 
     // Create or update interaction record
     let interaction = await this.userAspirantInteractionRepo
-      .createQueryBuilder('interaction')
-      .where('interaction.userId = :userId', { userId })
-      .andWhere('interaction.aspirantId = :aspirantId', { aspirantId })
+      .createQueryBuilder("interaction")
+      .where("interaction.userId = :userId", { userId })
+      .andWhere("interaction.aspirantId = :aspirantId", { aspirantId })
       .getOne();
 
     if (!interaction) {
-      interaction = await this.userAspirantInteractionRepo.save({ userId, aspirantId, isChat: true } as any);
+      interaction = await this.userAspirantInteractionRepo.save({
+        userId,
+        aspirantId,
+        isChat: true,
+      } as any);
     } else {
       interaction.isChat = true;
       await this.userAspirantInteractionRepo.save(interaction);
@@ -585,20 +653,21 @@ export class UsersService {
 
     // Check total aspirants in user's ward
     const totalAspirantsInWard = await this.aspirantRepo.count({
-      where: { wardId: user.wardId }
+      where: { wardId: user.wardId },
     });
 
     // Check if user has interacted with enough different aspirants
     const uniqueAspirants = await this.userAspirantInteractionRepo
-      .createQueryBuilder('interaction')
-      .where('interaction.userId = :userId', { userId })
-      .select('COUNT(DISTINCT interaction.aspirantId)', 'count')
+      .createQueryBuilder("interaction")
+      .where("interaction.userId = :userId", { userId })
+      .select("COUNT(DISTINCT interaction.aspirantId)", "count")
       .getRawOne();
 
     const count = parseInt(uniqueAspirants.count);
     const requiredCount = 1;
     const aspirantLabel = aspirant.name || `#${aspirantId}`;
-    const message = `Chat interaction tracked with aspirant ${aspirantLabel}.` +
+    const message =
+      `Chat interaction tracked with aspirant ${aspirantLabel}.` +
       (count >= requiredCount
         ? ` You have interacted with ${count} aspirant(s). Voting enabled!`
         : ` Interact with ${requiredCount - count} more aspirant(s) to enable voting.`);
@@ -613,22 +682,31 @@ export class UsersService {
     return { user, message };
   }
 
-  async trackMeeting(userId: number, aspirantId: number): Promise<{ user: User; message: string }> {
+  async trackMeeting(
+    userId: number,
+    aspirantId: number,
+  ): Promise<{ user: User; message: string }> {
     const user = await this.repo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    
-    const aspirant = await this.aspirantRepo.findOne({ where: { id: aspirantId } });
-    if (!aspirant) throw new NotFoundException('Aspirant not found');
+    if (!user) throw new NotFoundException("User not found");
+
+    const aspirant = await this.aspirantRepo.findOne({
+      where: { id: aspirantId },
+    });
+    if (!aspirant) throw new NotFoundException("Aspirant not found");
 
     // Create or update interaction record
     let interaction = await this.userAspirantInteractionRepo
-      .createQueryBuilder('interaction')
-      .where('interaction.userId = :userId', { userId })
-      .andWhere('interaction.aspirantId = :aspirantId', { aspirantId })
+      .createQueryBuilder("interaction")
+      .where("interaction.userId = :userId", { userId })
+      .andWhere("interaction.aspirantId = :aspirantId", { aspirantId })
       .getOne();
 
     if (!interaction) {
-      interaction = await this.userAspirantInteractionRepo.save({ userId, aspirantId, isMeeting: true } as any);
+      interaction = await this.userAspirantInteractionRepo.save({
+        userId,
+        aspirantId,
+        isMeeting: true,
+      } as any);
     } else {
       interaction.isMeeting = true;
       await this.userAspirantInteractionRepo.save(interaction);
@@ -636,20 +714,21 @@ export class UsersService {
 
     // Check total aspirants in user's ward
     const totalAspirantsInWard = await this.aspirantRepo.count({
-      where: { wardId: user.wardId }
+      where: { wardId: user.wardId },
     });
 
     // Check if user has interacted with enough different aspirants
     const uniqueAspirants = await this.userAspirantInteractionRepo
-      .createQueryBuilder('interaction')
-      .where('interaction.userId = :userId', { userId })
-      .select('COUNT(DISTINCT interaction.aspirantId)', 'count')
+      .createQueryBuilder("interaction")
+      .where("interaction.userId = :userId", { userId })
+      .select("COUNT(DISTINCT interaction.aspirantId)", "count")
       .getRawOne();
 
     const count = parseInt(uniqueAspirants.count);
     const requiredCount = 1;
     const aspirantLabel = aspirant.name || `#${aspirantId}`;
-    const message = `Meeting interaction tracked with aspirant ${aspirantLabel}.` +
+    const message =
+      `Meeting interaction tracked with aspirant ${aspirantLabel}.` +
       (count >= requiredCount
         ? ` You have interacted with ${count} aspirant(s). Voting enabled!`
         : ` Interact with ${requiredCount - count} more aspirant(s) to enable voting.`);
@@ -664,22 +743,31 @@ export class UsersService {
     return { user, message };
   }
 
-  async trackDirectMeet(userId: number, aspirantId: number): Promise<{ user: User; message: string }> {
+  async trackDirectMeet(
+    userId: number,
+    aspirantId: number,
+  ): Promise<{ user: User; message: string }> {
     const user = await this.repo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    
-    const aspirant = await this.aspirantRepo.findOne({ where: { id: aspirantId } });
-    if (!aspirant) throw new NotFoundException('Aspirant not found');
+    if (!user) throw new NotFoundException("User not found");
+
+    const aspirant = await this.aspirantRepo.findOne({
+      where: { id: aspirantId },
+    });
+    if (!aspirant) throw new NotFoundException("Aspirant not found");
 
     // Create or update interaction record
     let interaction = await this.userAspirantInteractionRepo
-      .createQueryBuilder('interaction')
-      .where('interaction.userId = :userId', { userId })
-      .andWhere('interaction.aspirantId = :aspirantId', { aspirantId })
+      .createQueryBuilder("interaction")
+      .where("interaction.userId = :userId", { userId })
+      .andWhere("interaction.aspirantId = :aspirantId", { aspirantId })
       .getOne();
 
     if (!interaction) {
-      interaction = await this.userAspirantInteractionRepo.save({ userId, aspirantId, isDirectMeet: true } as any);
+      interaction = await this.userAspirantInteractionRepo.save({
+        userId,
+        aspirantId,
+        isDirectMeet: true,
+      } as any);
     } else {
       interaction.isDirectMeet = true;
       await this.userAspirantInteractionRepo.save(interaction);
@@ -687,20 +775,21 @@ export class UsersService {
 
     // Check total aspirants in user's ward
     const totalAspirantsInWard = await this.aspirantRepo.count({
-      where: { wardId: user.wardId }
+      where: { wardId: user.wardId },
     });
 
     // Check if user has interacted with enough different aspirants
     const uniqueAspirants = await this.userAspirantInteractionRepo
-      .createQueryBuilder('interaction')
-      .where('interaction.userId = :userId', { userId })
-      .select('COUNT(DISTINCT interaction.aspirantId)', 'count')
+      .createQueryBuilder("interaction")
+      .where("interaction.userId = :userId", { userId })
+      .select("COUNT(DISTINCT interaction.aspirantId)", "count")
       .getRawOne();
 
     const count = parseInt(uniqueAspirants.count);
     const requiredCount = 1;
     const aspirantLabel = aspirant.name || `#${aspirantId}`;
-    const message = `Direct meet interaction tracked with aspirant ${aspirantLabel}.` +
+    const message =
+      `Direct meet interaction tracked with aspirant ${aspirantLabel}.` +
       (count >= requiredCount
         ? ` You have interacted with ${count} aspirant(s). Voting enabled!`
         : ` Interact with ${requiredCount - count} more aspirant(s) to enable voting.`);
@@ -715,22 +804,31 @@ export class UsersService {
     return { user, message };
   }
 
-  async trackPhoneCall(userId: number, aspirantId: number): Promise<{ user: User; message: string }> {
+  async trackPhoneCall(
+    userId: number,
+    aspirantId: number,
+  ): Promise<{ user: User; message: string }> {
     const user = await this.repo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    
-    const aspirant = await this.aspirantRepo.findOne({ where: { id: aspirantId } });
-    if (!aspirant) throw new NotFoundException('Aspirant not found');
+    if (!user) throw new NotFoundException("User not found");
+
+    const aspirant = await this.aspirantRepo.findOne({
+      where: { id: aspirantId },
+    });
+    if (!aspirant) throw new NotFoundException("Aspirant not found");
 
     // Create or update interaction record
     let interaction = await this.userAspirantInteractionRepo
-      .createQueryBuilder('interaction')
-      .where('interaction.userId = :userId', { userId })
-      .andWhere('interaction.aspirantId = :aspirantId', { aspirantId })
+      .createQueryBuilder("interaction")
+      .where("interaction.userId = :userId", { userId })
+      .andWhere("interaction.aspirantId = :aspirantId", { aspirantId })
       .getOne();
 
     if (!interaction) {
-      interaction = await this.userAspirantInteractionRepo.save({ userId, aspirantId, isPhoneCall: true } as any);
+      interaction = await this.userAspirantInteractionRepo.save({
+        userId,
+        aspirantId,
+        isPhoneCall: true,
+      } as any);
     } else {
       interaction.isPhoneCall = true;
       await this.userAspirantInteractionRepo.save(interaction);
@@ -738,20 +836,21 @@ export class UsersService {
 
     // Check total aspirants in user's ward
     const totalAspirantsInWard = await this.aspirantRepo.count({
-      where: { wardId: user.wardId }
+      where: { wardId: user.wardId },
     });
 
     // Check if user has interacted with enough different aspirants
     const uniqueAspirants = await this.userAspirantInteractionRepo
-      .createQueryBuilder('interaction')
-      .where('interaction.userId = :userId', { userId })
-      .select('COUNT(DISTINCT interaction.aspirantId)', 'count')
+      .createQueryBuilder("interaction")
+      .where("interaction.userId = :userId", { userId })
+      .select("COUNT(DISTINCT interaction.aspirantId)", "count")
       .getRawOne();
 
     const count = parseInt(uniqueAspirants.count);
     const requiredCount = 1;
     const aspirantLabel = aspirant.name || `#${aspirantId}`;
-    const message = `Phone call interaction tracked with aspirant ${aspirantLabel}.` +
+    const message =
+      `Phone call interaction tracked with aspirant ${aspirantLabel}.` +
       (count >= requiredCount
         ? ` You have interacted with ${count} aspirant(s). Voting enabled!`
         : ` Interact with ${requiredCount - count} more aspirant(s) to enable voting.`);
@@ -778,10 +877,10 @@ export class UsersService {
 
   async deleteAccount(userId: number) {
     const user = await this.repo.findOne({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) throw new NotFoundException("User not found");
 
-    if (user.role !== 'voter') {
-      throw new BadRequestException('Only voters can delete their account');
+    if (user.role !== "voter") {
+      throw new BadRequestException("Only voters can delete their account");
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -791,22 +890,56 @@ export class UsersService {
     try {
       // Delete from child/referencing tables first to avoid FK errors
       // Tables referencing userId as voterId
-      await queryRunner.query(`DELETE FROM "activity_ratings" WHERE "voterId" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "meeting_responses" WHERE "voterId" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "visit_responses" WHERE "voterId" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "aspirant_bookings" WHERE "voterId" = $1`, [userId]);
+      await queryRunner.query(
+        `DELETE FROM "activity_ratings" WHERE "voterId" = $1`,
+        [userId],
+      );
+      await queryRunner.query(
+        `DELETE FROM "meeting_responses" WHERE "voterId" = $1`,
+        [userId],
+      );
+      await queryRunner.query(
+        `DELETE FROM "visit_responses" WHERE "voterId" = $1`,
+        [userId],
+      );
+      await queryRunner.query(
+        `DELETE FROM "aspirant_bookings" WHERE "voterId" = $1`,
+        [userId],
+      );
 
       // Tables referencing userId as userId
-      await queryRunner.query(`DELETE FROM "votes" WHERE "userId" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "messages" WHERE "user_id" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "aspirant_messages" WHERE "user_id" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "aspirant_discussion_messages" WHERE "user_id" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "user_aspirant_interactions" WHERE "userId" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "user_signed_documents" WHERE "userId" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "ward_meetings" WHERE "created_by_id" = $1`, [userId]);
+      await queryRunner.query(`DELETE FROM "votes" WHERE "userId" = $1`, [
+        userId,
+      ]);
+      await queryRunner.query(`DELETE FROM "messages" WHERE "user_id" = $1`, [
+        userId,
+      ]);
+      await queryRunner.query(
+        `DELETE FROM "aspirant_messages" WHERE "user_id" = $1`,
+        [userId],
+      );
+      await queryRunner.query(
+        `DELETE FROM "aspirant_discussion_messages" WHERE "user_id" = $1`,
+        [userId],
+      );
+      await queryRunner.query(
+        `DELETE FROM "user_aspirant_interactions" WHERE "userId" = $1`,
+        [userId],
+      );
+      await queryRunner.query(
+        `DELETE FROM "user_signed_documents" WHERE "userId" = $1`,
+        [userId],
+      );
+      await queryRunner.query(
+        `DELETE FROM "ward_meetings" WHERE "created_by_id" = $1`,
+        [userId],
+      );
 
       // Aspirant and its child tables (user may have been an aspirant before withdrawing)
-      const aspirantRows = await queryRunner.query(`SELECT "id" FROM "aspirants" WHERE "userId" = $1`, [userId]);
+      const aspirantRows = await queryRunner.query(
+        `SELECT "id" FROM "aspirants" WHERE "userId" = $1`,
+        [userId],
+      );
       if (aspirantRows.length > 0) {
         const aspirantIds = aspirantRows.map((r: any) => r.id);
         // Delete children of aspirant meetings first
@@ -814,34 +947,75 @@ export class UsersService {
           `DELETE FROM "meeting_responses" WHERE "meetingId" IN (SELECT "id" FROM "aspirant_meetings" WHERE "aspirantId" = ANY($1))`,
           [aspirantIds],
         );
-        await queryRunner.query(`DELETE FROM "aspirant_meetings" WHERE "aspirantId" = ANY($1)`, [aspirantIds]);
+        await queryRunner.query(
+          `DELETE FROM "aspirant_meetings" WHERE "aspirantId" = ANY($1)`,
+          [aspirantIds],
+        );
         // Delete children of aspirant visits
         await queryRunner.query(
           `DELETE FROM "visit_responses" WHERE "visitId" IN (SELECT "id" FROM "aspirant_visits" WHERE "aspirantId" = ANY($1))`,
           [aspirantIds],
         );
-        await queryRunner.query(`DELETE FROM "aspirant_visits" WHERE "aspirantId" = ANY($1)`, [aspirantIds]);
-        await queryRunner.query(`DELETE FROM "aspirant_bookings" WHERE "aspirantId" = ANY($1)`, [aspirantIds]);
-        await queryRunner.query(`DELETE FROM "activity_ratings" WHERE "aspirantId" = ANY($1)`, [aspirantIds]);
-        await queryRunner.query(`DELETE FROM "aspirant_messages" WHERE "aspirant_id" = ANY($1)`, [aspirantIds]);
-        await queryRunner.query(`DELETE FROM "aspirant_discussion_messages" WHERE "aspirant_id" = ANY($1)`, [aspirantIds]);
-        await queryRunner.query(`DELETE FROM "votes" WHERE "aspirantId" = ANY($1)`, [aspirantIds]);
-        await queryRunner.query(`DELETE FROM "user_aspirant_interactions" WHERE "aspirantId" = ANY($1)`, [aspirantIds]);
-        await queryRunner.query(`DELETE FROM "aspirants" WHERE "id" = ANY($1)`, [aspirantIds]);
+        await queryRunner.query(
+          `DELETE FROM "aspirant_visits" WHERE "aspirantId" = ANY($1)`,
+          [aspirantIds],
+        );
+        await queryRunner.query(
+          `DELETE FROM "aspirant_bookings" WHERE "aspirantId" = ANY($1)`,
+          [aspirantIds],
+        );
+        await queryRunner.query(
+          `DELETE FROM "activity_ratings" WHERE "aspirantId" = ANY($1)`,
+          [aspirantIds],
+        );
+        await queryRunner.query(
+          `DELETE FROM "aspirant_messages" WHERE "aspirant_id" = ANY($1)`,
+          [aspirantIds],
+        );
+        await queryRunner.query(
+          `DELETE FROM "aspirant_discussion_messages" WHERE "aspirant_id" = ANY($1)`,
+          [aspirantIds],
+        );
+        await queryRunner.query(
+          `DELETE FROM "votes" WHERE "aspirantId" = ANY($1)`,
+          [aspirantIds],
+        );
+        await queryRunner.query(
+          `DELETE FROM "user_aspirant_interactions" WHERE "aspirantId" = ANY($1)`,
+          [aspirantIds],
+        );
+        await queryRunner.query(
+          `DELETE FROM "aspirants" WHERE "id" = ANY($1)`,
+          [aspirantIds],
+        );
       }
 
       // Issues tables
-      await queryRunner.query(`DELETE FROM "issue_hand_raises" WHERE "createdById" = $1`, [userId]);
-      await queryRunner.query(`DELETE FROM "issues" WHERE "createdById" = $1`, [userId]);
+      await queryRunner.query(
+        `DELETE FROM "issue_hand_raises" WHERE "createdById" = $1`,
+        [userId],
+      );
+      await queryRunner.query(`DELETE FROM "issues" WHERE "createdById" = $1`, [
+        userId,
+      ]);
 
       // Reports (both as reporter and reported)
-      await queryRunner.query(`DELETE FROM "reports" WHERE "reported_by_id" = $1 OR "reported_user_id" = $1`, [userId]);
+      await queryRunner.query(
+        `DELETE FROM "reports" WHERE "reported_by_id" = $1 OR "reported_user_id" = $1`,
+        [userId],
+      );
 
       // OTPs
-      await queryRunner.query(`DELETE FROM "otps" WHERE "email" = $1 OR "phone" = $2`, [user.email, user.phone]);
+      await queryRunner.query(
+        `DELETE FROM "otps" WHERE "email" = $1 OR "phone" = $2`,
+        [user.email, user.phone],
+      );
 
       // Pending aspirant registrations
-      await queryRunner.query(`DELETE FROM "pending_aspirant_registrations" WHERE "userId" = $1`, [userId]);
+      await queryRunner.query(
+        `DELETE FROM "pending_aspirant_registrations" WHERE "userId" = $1`,
+        [userId],
+      );
 
       // Disable FK checks and delete the user
       await queryRunner.query(`SET session_replication_role = 'replica'`);
@@ -849,14 +1023,17 @@ export class UsersService {
       await queryRunner.query(`SET session_replication_role = 'origin'`);
 
       await queryRunner.commitTransaction();
-      return { message: 'Account permanently deleted' };
+      return { message: "Account permanently deleted" };
     } catch (error) {
       await queryRunner.rollbackTransaction();
-      console.error(`[DeleteAccount] Hard delete failed for userId=${userId}:`, (error as any)?.message || error);
+      console.error(
+        `[DeleteAccount] Hard delete failed for userId=${userId}:`,
+        (error as any)?.message || error,
+      );
 
       // Hard delete failed — soft delete instead
       user.isSelfDeleted = true;
-      user.name = 'Deleted User';
+      user.name = "Deleted User";
       user.phone = undefined;
       user.profilePicture = undefined;
       user.lastOtp = null;
@@ -865,13 +1042,16 @@ export class UsersService {
       // Clear phone in aspirant table too
       await this.aspirantRepo.update({ userId }, { phone: null as any });
 
-      return { message: 'Account deactivated' };
+      return { message: "Account deactivated" };
     } finally {
       await queryRunner.release();
     }
   }
 
-  async reactivateAccount(email: string, userData: Partial<User>): Promise<User | null> {
+  async reactivateAccount(
+    email: string,
+    userData: Partial<User>,
+  ): Promise<User | null> {
     const user = await this.repo.findOne({ where: { email } });
     if (!user) return null;
     if (!user.isSelfDeleted && !user.isBlocked) return null;
@@ -880,13 +1060,15 @@ export class UsersService {
     user.isBlocked = false;
     user.isSelfDeleted = false;
     user.name = userData.name || user.name;
-    user.role = 'voter';
+    user.role = "voter";
     if (userData.wardId !== undefined) user.wardId = userData.wardId;
     if (userData.voterEpic) user.voterEpic = userData.voterEpic;
     if (userData.nameEn) user.nameEn = userData.nameEn;
     if (userData.nameKn) user.nameKn = userData.nameKn;
-    if (userData.corporationName) user.corporationName = userData.corporationName;
-    if (userData.corporationNameL1) user.corporationNameL1 = userData.corporationNameL1;
+    if (userData.corporationName)
+      user.corporationName = userData.corporationName;
+    if (userData.corporationNameL1)
+      user.corporationNameL1 = userData.corporationNameL1;
     if (userData.wardName) user.wardName = userData.wardName;
     if (userData.wardNameL1) user.wardNameL1 = userData.wardNameL1;
     if (userData.psName) user.psName = userData.psName;

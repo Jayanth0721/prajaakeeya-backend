@@ -1,9 +1,9 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
-import { BaseEntity } from '../common/base.entity';
-import { Ward } from '../wards/ward.entity';
-import { User } from '../users/user.entity';
+import { Column, Entity, ManyToOne } from "typeorm";
+import { BaseEntity } from "../common/base.entity";
+import { Ward } from "../wards/ward.entity";
+import { User } from "../users/user.entity";
 
-@Entity('issues')
+@Entity("issues")
 export class Issue extends BaseEntity {
   @Column({ nullable: true })
   electionId?: number;
@@ -23,12 +23,12 @@ export class Issue extends BaseEntity {
   @ManyToOne(() => User)
   createdBy?: User;
 
-  @Column({ type: 'text' })
+  @Column({ type: "text" })
   title!: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: "text", nullable: true })
   description?: string;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ type: "boolean", default: true })
   isActive!: boolean;
 }

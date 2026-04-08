@@ -1,8 +1,12 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Parliamentary } from './parliamentary.entity';
-import { CreateParliamentaryDto } from './dto/create-parliamentary.dto';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from "@nestjs/common";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import { Parliamentary } from "./parliamentary.entity";
+import { CreateParliamentaryDto } from "./dto/create-parliamentary.dto";
 
 @Injectable()
 export class ParliamentaryService {
@@ -12,9 +16,11 @@ export class ParliamentaryService {
   ) {}
 
   async create(dto: CreateParliamentaryDto) {
-    const existing = await this.parliamentaryRepo.findOne({ where: { name: dto.name } });
+    const existing = await this.parliamentaryRepo.findOne({
+      where: { name: dto.name },
+    });
     if (existing) {
-      throw new ConflictException('Parliamentary constituency already exists');
+      throw new ConflictException("Parliamentary constituency already exists");
     }
     const parliamentary = this.parliamentaryRepo.create(dto);
     return this.parliamentaryRepo.save(parliamentary);
@@ -22,14 +28,20 @@ export class ParliamentaryService {
 
   findAll(state?: string) {
     if (state) {
-      return this.parliamentaryRepo.find({ where: { state }, order: { name: 'ASC' } });
+      return this.parliamentaryRepo.find({
+        where: { state },
+        order: { name: "ASC" },
+      });
     }
-    return this.parliamentaryRepo.find({ order: { name: 'ASC' } });
+    return this.parliamentaryRepo.find({ order: { name: "ASC" } });
   }
 
   async findOne(id: number) {
-    const parliamentary = await this.parliamentaryRepo.findOne({ where: { id } });
-    if (!parliamentary) throw new NotFoundException('Parliamentary constituency not found');
+    const parliamentary = await this.parliamentaryRepo.findOne({
+      where: { id },
+    });
+    if (!parliamentary)
+      throw new NotFoundException("Parliamentary constituency not found");
     return parliamentary;
   }
 
@@ -43,6 +55,8 @@ export class ParliamentaryService {
   async delete(id: number) {
     const parliamentary = await this.findOne(id);
     await this.parliamentaryRepo.remove(parliamentary);
-    return { message: `Parliamentary constituency '${parliamentary.name}' deleted` };
+    return {
+      message: `Parliamentary constituency '${parliamentary.name}' deleted`,
+    };
   }
 }
