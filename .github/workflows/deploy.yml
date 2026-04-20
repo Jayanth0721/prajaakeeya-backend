@@ -20,15 +20,15 @@ jobs:
       - staging
     environment: staging
     env:
-      APP_DIR: /var/www/prajaakeeya-api-staging
+      APP_DIR: /home/deploy/apps/prajaakeeya-api-staging
       PM2_NAME: prajaakeeya-api-staging
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'npm'
@@ -43,20 +43,23 @@ jobs:
         run: |
           set -euo pipefail
 
-          sudo -n mkdir -p "$APP_DIR"
-          sudo -n chown -R deploy:deploy "$APP_DIR"
+          mkdir -p "$APP_DIR"
 
-          sudo -n -u deploy rm -rf "$APP_DIR/dist"
-          sudo -n -u deploy cp -r dist "$APP_DIR/"
-          sudo -n -u deploy cp package.json package-lock.json "$APP_DIR/"
+          rm -rf "$APP_DIR/dist"
+          cp -r dist "$APP_DIR/"
+          cp package.json package-lock.json "$APP_DIR/"
 
-          sudo -n -u deploy bash -lc "cd '$APP_DIR' && npm ci --omit=dev"
+          (cd "$APP_DIR" && npm ci --omit=dev)
 
-          command -v pm2 >/dev/null 2>&1 || sudo -n npm i -g pm2
+          export PATH="$HOME/.local/bin:$PATH"
+          if ! command -v pm2 >/dev/null 2>&1; then
+            npm config set prefix "$HOME/.local"
+            npm i -g pm2
+          fi
 
-          sudo -n -u deploy bash -lc "cd '$APP_DIR' && pm2 describe $PM2_NAME >/dev/null 2>&1 && pm2 restart $PM2_NAME --update-env || pm2 start dist/main.js --name $PM2_NAME"
+          (cd "$APP_DIR" && pm2 describe "$PM2_NAME" >/dev/null 2>&1 && pm2 restart "$PM2_NAME" --update-env || pm2 start dist/main.js --name "$PM2_NAME")
 
-          sudo -n -u deploy pm2 save
+          pm2 save
 
   deploy-production:
     name: Build & Deploy (production)
@@ -67,15 +70,15 @@ jobs:
       - production
     environment: production
     env:
-      APP_DIR: /var/www/prajaakeeya-api
+      APP_DIR: /home/deploy/apps/prajaakeeya-api
       PM2_NAME: prajaakeeya-api
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'npm'
@@ -90,17 +93,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          sudo -n mkdir -p "$APP_DIR"
-          sudo -n chown -R deploy:deploy "$APP_DIR"
+          mkdir -p "$APP_DIR"
 
-          sudo -n -u deploy rm -rf "$APP_DIR/dist"
-          sudo -n -u deploy cp -r dist "$APP_DIR/"
-          sudo -n -u deploy cp package.json package-lock.json "$APP_DIR/"
+          rm -rf "$APP_DIR/dist"
+          cp -r dist "$APP_DIR/"
+          cp package.json package-lock.json "$APP_DIR/"
 
-          sudo -n -u deploy bash -lc "cd '$APP_DIR' && npm ci --omit=dev"
+          (cd "$APP_DIR" && npm ci --omit=dev)
 
-          command -v pm2 >/dev/null 2>&1 || sudo -n npm i -g pm2
+          export PATH="$HOME/.local/bin:$PATH"
+          if ! command -v pm2 >/dev/null 2>&1; then
+            npm config set prefix "$HOME/.local"
+            npm i -g pm2
+          fi
 
-          sudo -n -u deploy bash -lc "cd '$APP_DIR' && pm2 describe $PM2_NAME >/dev/null 2>&1 && pm2 restart $PM2_NAME --update-env || pm2 start dist/main.js --name $PM2_NAME"
+          (cd "$APP_DIR" && pm2 describe "$PM2_NAME" >/dev/null 2>&1 && pm2 restart "$PM2_NAME" --update-env || pm2 start dist/main.js --name "$PM2_NAME")
 
-          sudo -n -u deploy pm2 save
+          pm2 save
