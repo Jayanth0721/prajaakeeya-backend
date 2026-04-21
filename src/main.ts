@@ -24,7 +24,7 @@ async function bootstrap() {
 
   // CORS: restrict origins based on environment
   const corsEnv =
-    process.env.NODE_ENV === "nothing"
+    process.env.NODE_ENV === "production"
       ? process.env.CORS_ALLOWED_ORIGINS_PROD
       : process.env.CORS_ALLOWED_ORIGINS_DEV;
   const allowedOrigins = (corsEnv ?? "")
@@ -34,7 +34,7 @@ async function bootstrap() {
   app.enableCors({ origin: allowedOrigins, credentials: true });
 
   // Swagger: only enable in non-production environments
-  if (process.env.NODE_ENV !== "nothing") {
+  if (process.env.NODE_ENV !== "production") {
     const config = new DocumentBuilder()
       .setTitle("Prajaakeeya API Documentation")
       .setDescription("API Documentation for Prajaakeeya can be found here.")
