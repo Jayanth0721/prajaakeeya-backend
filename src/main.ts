@@ -37,7 +37,7 @@ async function bootstrap() {
   if (process.env.NODE_ENV !== "production") {
     const config = new DocumentBuilder()
       .setTitle("Prajaakeeya API")
-      .setDescription("API for Prajaakeeya ward voter selection")
+      .setDescription("API Documentation for Prajaakeeya can be found here.")
       .setVersion("2.0")
       .addBearerAuth()
       .build();
