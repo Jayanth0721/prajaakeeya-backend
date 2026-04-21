@@ -24,7 +24,7 @@ async function bootstrap() {
 
   // CORS: restrict origins based on environment
   const corsEnv =
-    process.env.NODE_ENV === "production"
+    process.env.NODE_ENV === "nothing"
       ? process.env.CORS_ALLOWED_ORIGINS_PROD
       : process.env.CORS_ALLOWED_ORIGINS_DEV;
   const allowedOrigins = (corsEnv ?? "")
