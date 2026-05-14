@@ -668,30 +668,43 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
    * "Greater Bengaluru Authority(GBA) – Bengaluru"); for a village
    * (gram panchayat) it's the village + GP + taluk + district.
    *
+   * If the user is an aspirant, their aspirant record's election +
+   * constituency act as a fallback for whichever bucket their election
+   * type maps to — so the response still shows the right hierarchy even
+   * when the user-level saved IDs haven't been set.
+   *
    * Failures on any single lookup don't block the others — the caller
    * just gets `null` for that field's name.
    */
-  private async resolveSavedConstituencies(user: User) {
+  private async resolveSavedConstituencies(
+    user: User,
+    aspirant?: { electionId?: number; constituencyId?: number } | null,
+    aspirantElectionType?: string | null,
+  ) {
+    const aspirantBucketId = (type: string) =>
+      aspirantElectionType === type ? (aspirant?.constituencyId ?? null) : null;
+
+    const lokSabhaId = user.lokSabhaConstituencyId ?? aspirantBucketId("lok_sabha");
+    const stateAssemblyId =
+      user.stateAssemblyConstituencyId ?? aspirantBucketId("state_assembly");
+    const wardId =
+      user.municipalCorporationConstituencyId ??
+      aspirantBucketId("municipal_corporation");
+    const villageId =
+      user.gramPanchayatConstituencyId ?? aspirantBucketId("gram_panchayat");
+
     const [lokSabha, stateAssembly, ward, village] = await Promise.all([
-      user.lokSabhaConstituencyId
-        ? this.parliamentaryService
-            .findOne(user.lokSabhaConstituencyId)
-            .catch(() => null)
+      lokSabhaId
+        ? this.parliamentaryService.findOne(lokSabhaId).catch(() => null)
         : Promise.resolve(null),
-      user.stateAssemblyConstituencyId
-        ? this.assemblyService
-            .findOne(user.stateAssemblyConstituencyId)
-            .catch(() => null)
+      stateAssemblyId
+        ? this.assemblyService.findOne(stateAssemblyId).catch(() => null)
         : Promise.resolve(null),
-      user.municipalCorporationConstituencyId
-        ? this.wardsService
-            .findOne(user.municipalCorporationConstituencyId)
-            .catch(() => null)
+      wardId
+        ? this.wardsService.findOne(wardId).catch(() => null)
         : Promise.resolve(null),
-      user.gramPanchayatConstituencyId
-        ? this.gramaPanchayatService
-            .findBySrNo(user.gramPanchayatConstituencyId)
-            .catch(() => null)
+      villageId
+        ? this.gramaPanchayatService.findBySrNo(villageId).catch(() => null)
         : Promise.resolve(null),
     ]);
 
@@ -739,7 +752,7 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
 
     // Run independent lookups concurrently. The aspirant lookup is only
     // meaningful for aspirant users; others get undefined.
-    const [aspirant, ward, hasVoted, savedConstituencies] = await Promise.all([
+    const [aspirant, ward, hasVoted] = await Promise.all([
       user.role === "aspirant"
         ? this.aspirantsService.findByUserId(user.id).catch(() => null)
         : Promise.resolve(null),
@@ -747,10 +760,34 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
         ? this.wardsService.findOne(user.wardId).catch(() => null)
         : Promise.resolve(null),
       this.votesService.hasUserVotedInActiveWindow(user.id).catch(() => false),
-      this.resolveSavedConstituencies(user),
     ]);
 
+    // Resolve the aspirant's election type once so the saved-constituency
+    // helper can use the aspirant record as a fallback when the user's
+    // own constituency IDs are unset.
+    let aspirantElectionType: string | null = null;
+    if (aspirant?.electionId) {
+      const election = await this.electionsService
+        .findById(aspirant.electionId)
+        .catch(() => null);
+      aspirantElectionType = election?.type ?? null;
+    }
+    const savedConstituencies = await this.resolveSavedConstituencies(
+      user,
+      aspirant,
+      aspirantElectionType,
+    );
+
     const result: any = { ...user, ...savedConstituencies };
+
+    // The four raw *ConstituencyId fields are redundant once the resolved
+    // *Constituency objects are present (FE can read e.g.
+    // municipalCorporationConstituency?.id). Drop them to keep the payload
+    // single-sourced.
+    delete result.lokSabhaConstituencyId;
+    delete result.stateAssemblyConstituencyId;
+    delete result.municipalCorporationConstituencyId;
+    delete result.gramPanchayatConstituencyId;
 
     if (ward) {
       result.wardNumber = ward.number;

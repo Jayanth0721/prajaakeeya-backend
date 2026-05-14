@@ -345,7 +345,10 @@ export class AspirantsService {
           });
         }
         const updated = await this.repo.findOne({ where: { id: existing.id } });
-        if (updated) await this.dispatchNewAspirantNotification(updated);
+        if (updated) {
+          await this.syncUserSavedConstituency(updated);
+          await this.dispatchNewAspirantNotification(updated);
+        }
         return { ...updated, documentStatus: updated!.getDocumentStatus() };
       }
       entityData.userId = user.id;
@@ -371,6 +374,7 @@ export class AspirantsService {
       }
     }
 
+    await this.syncUserSavedConstituency(aspirant);
     await this.dispatchNewAspirantNotification(aspirant);
 
     // Include documentStatus in response
@@ -387,6 +391,43 @@ export class AspirantsService {
       await this.notificationsService.notifyNewAspirant(aspirant, ctx);
     } catch {
       // Best-effort: notification failures must not break aspirant flows.
+    }
+  }
+
+  /**
+   * Sync the aspirant's constituency onto the user's saved constituency
+   * field that matches the election type (e.g. an aspirant registered
+   * for a municipal corporation ward gets their
+   * `municipalCorporationConstituencyId` filled in). Keeps the
+   * /auth/me payload and notification fan-out consistent without the
+   * user having to set it manually.
+   */
+  private async syncUserSavedConstituency(aspirant: Aspirant) {
+    if (!aspirant.userId || !aspirant.electionId || !aspirant.constituencyId) {
+      return;
+    }
+    try {
+      const election = await this.electionsService.findById(aspirant.electionId);
+      const patch: Record<string, number> = {};
+      switch (election.type) {
+        case "lok_sabha":
+          patch.lokSabhaConstituencyId = aspirant.constituencyId;
+          break;
+        case "state_assembly":
+          patch.stateAssemblyConstituencyId = aspirant.constituencyId;
+          break;
+        case "municipal_corporation":
+          patch.municipalCorporationConstituencyId = aspirant.constituencyId;
+          break;
+        case "gram_panchayat":
+          patch.gramPanchayatConstituencyId = aspirant.constituencyId;
+          break;
+        default:
+          return;
+      }
+      await this.usersService.updateConstituencies(aspirant.userId, patch);
+    } catch {
+      /* best-effort */
     }
   }
 
