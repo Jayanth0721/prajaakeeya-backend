@@ -73,8 +73,17 @@ export class NotificationsController {
     return this.service.markAllRead(user.id);
   }
 
+  @Delete()
+  @ApiOperation({
+    summary: "Delete every notification for this user",
+  })
+  @ApiResponse({ status: 200, description: "Notifications deleted" })
+  deleteAll(@CurrentUser() user: any) {
+    return this.service.deleteAll(user.id);
+  }
+
   @Delete(":id")
-  @ApiOperation({ summary: "Delete a notification" })
+  @ApiOperation({ summary: "Delete a single notification" })
   @ApiParam({ name: "id", type: "number" })
   @ApiResponse({ status: 200, description: "Notification deleted" })
   @ApiResponse({ status: 404, description: "Notification not found" })

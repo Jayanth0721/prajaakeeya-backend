@@ -80,6 +80,16 @@ export class NotificationsService {
     return { deleted: 1 };
   }
 
+  async deleteAll(userId: number) {
+    const res = await this.repo
+      .createQueryBuilder()
+      .delete()
+      .from(Notification)
+      .where("user_id = :userId", { userId })
+      .execute();
+    return { deleted: res.affected ?? 0 };
+  }
+
   /**
    * Find every user whose saved constituency matches the aspirant's
    * election type + constituency. Excludes the aspirant's own userId so
