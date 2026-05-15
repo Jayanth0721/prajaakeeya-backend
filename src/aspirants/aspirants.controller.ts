@@ -169,18 +169,14 @@ export class AspirantsController {
   }
 
   @Post("meeting")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("admin")
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: "Set meeting link for multiple aspirants (admin only)",
-  })
+  @ApiOperation({ summary: "Set meeting link for multiple aspirants" })
   @ApiResponse({
     status: 200,
     description: "Meeting links set successfully for all aspirants",
   })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Admin role required" })
   @ApiResponse({ status: 404, description: "One or more aspirants not found" })
   setMeeting(@Body() dto: SetMeetingLinkDto) {
     return this.aspirantsService.setMeetingLinkForMultiple(
@@ -380,13 +376,11 @@ export class AspirantsController {
   }
 
   @Delete("meeting")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("admin")
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Delete multiple meetings by IDs (admin only)" })
+  @ApiOperation({ summary: "Delete multiple meetings by IDs" })
   @ApiResponse({ status: 200, description: "Meetings deleted successfully" })
   @ApiResponse({ status: 401, description: "Unauthorized" })
-  @ApiResponse({ status: 403, description: "Admin role required" })
   deleteMeetings(@Body() dto: DeleteMeetingsDto) {
     return this.aspirantsService.deleteMeetings(dto.meetingIds);
   }

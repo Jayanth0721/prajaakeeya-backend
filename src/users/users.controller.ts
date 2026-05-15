@@ -23,6 +23,7 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
+import { MAX_UPLOAD_BYTES } from "../common/upload.constants";
 import { UsersService } from "./users.service";
 import { CreateReportDto } from "./dto/create-report.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
@@ -71,7 +72,11 @@ export class UsersController {
   @Post("report")
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @UseInterceptors(FileInterceptor("attachment"))
+  @UseInterceptors(
+    FileInterceptor("attachment", {
+      limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+    }),
+  )
   @ApiConsumes("multipart/form-data")
   @ApiOperation({
     summary: "Report a voter or aspirant",

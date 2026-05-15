@@ -21,6 +21,8 @@ import { ElectionsService } from "../elections/elections.service";
 import { ActivityRating } from "./activity-rating.entity";
 import { UpdateAspirantDto } from "./dto/update-aspirant.dto";
 import { User } from "../users/user.entity";
+import { NotificationsService } from "../notifications/notifications.service";
+import { ElectionType } from "../elections/election.entity";
 
 interface ResponseCounts {
   attending: number;
@@ -46,9 +48,34 @@ export class AspirantsService {
     private readonly usersService: UsersService,
     private readonly wardsService: WardsService,
     private readonly electionsService: ElectionsService,
+    private readonly notificationsService: NotificationsService,
     @Inject(forwardRef(() => VotesService))
     private readonly votesService: VotesService,
   ) {}
+
+  /**
+   * Resolve the election type and human-friendly constituency name for an
+   * aspirant so notifications can be addressed in the right "namespace".
+   * Returns null when the aspirant has no election/constituency configured.
+   */
+  private async resolveConstituencyContext(
+    aspirant: Aspirant,
+  ): Promise<{ electionType: ElectionType; constituencyName: string | null } | null> {
+    if (!aspirant.electionId || !aspirant.constituencyId) return null;
+    const election = await this.electionsService.findById(aspirant.electionId);
+    const electionMap = new Map([
+      [election.id, { id: election.id, name: election.name, type: election.type }],
+    ]);
+    const lookup = await this.resolveConstituencyNames(
+      [{ electionId: aspirant.electionId, constituencyId: aspirant.constituencyId }],
+      electionMap,
+    );
+    return {
+      electionType: election.type as ElectionType,
+      constituencyName:
+        lookup.get(`${aspirant.electionId}:${aspirant.constituencyId}`) ?? null,
+    };
+  }
 
   /** Aggregated meeting response counts by meeting id, in one query. */
   private async getMeetingResponseCounts(
@@ -318,6 +345,10 @@ export class AspirantsService {
           });
         }
         const updated = await this.repo.findOne({ where: { id: existing.id } });
+        if (updated) {
+          await this.syncUserSavedConstituency(updated);
+          await this.dispatchNewAspirantNotification(updated);
+        }
         return { ...updated, documentStatus: updated!.getDocumentStatus() };
       }
       entityData.userId = user.id;
@@ -343,11 +374,86 @@ export class AspirantsService {
       }
     }
 
+    await this.syncUserSavedConstituency(aspirant);
+    await this.dispatchNewAspirantNotification(aspirant);
+
     // Include documentStatus in response
     return {
       ...aspirant,
       documentStatus: aspirant.getDocumentStatus(),
     };
+  }
+
+  private async dispatchNewAspirantNotification(aspirant: Aspirant) {
+    try {
+      const ctx = await this.resolveConstituencyContext(aspirant);
+      if (!ctx) return;
+      await this.notificationsService.notifyNewAspirant(aspirant, ctx);
+    } catch {
+      // Best-effort: notification failures must not break aspirant flows.
+    }
+  }
+
+  /**
+   * Sync the aspirant's constituency onto the user's saved constituency
+   * field that matches the election type (e.g. an aspirant registered
+   * for a municipal corporation ward gets their
+   * `municipalCorporationConstituencyId` filled in). Keeps the
+   * /auth/me payload and notification fan-out consistent without the
+   * user having to set it manually.
+   */
+  private async syncUserSavedConstituency(aspirant: Aspirant) {
+    if (!aspirant.userId || !aspirant.electionId || !aspirant.constituencyId) {
+      return;
+    }
+    try {
+      const election = await this.electionsService.findById(aspirant.electionId);
+      const patch: Record<string, number> = {};
+      switch (election.type) {
+        case "lok_sabha":
+          patch.lokSabhaConstituencyId = aspirant.constituencyId;
+          break;
+        case "state_assembly":
+          patch.stateAssemblyConstituencyId = aspirant.constituencyId;
+          break;
+        case "municipal_corporation":
+          patch.municipalCorporationConstituencyId = aspirant.constituencyId;
+          break;
+        case "gram_panchayat":
+          patch.gramPanchayatConstituencyId = aspirant.constituencyId;
+          break;
+        default:
+          return;
+      }
+      await this.usersService.updateConstituencies(aspirant.userId, patch);
+    } catch {
+      /* best-effort */
+    }
+  }
+
+  private async dispatchMeetingNotifications(
+    aspirantIds: number[],
+    meetingsByAspirant: Map<number, AspirantMeeting>,
+  ) {
+    if (!aspirantIds.length) return;
+    const aspirants = await this.repo.find({
+      where: aspirantIds.map((id) => ({ id })),
+    });
+    for (const aspirant of aspirants) {
+      const meeting = meetingsByAspirant.get(aspirant.id);
+      if (!meeting) continue;
+      try {
+        const ctx = await this.resolveConstituencyContext(aspirant);
+        if (!ctx) continue;
+        await this.notificationsService.notifyAspirantMeeting(
+          aspirant,
+          meeting,
+          ctx,
+        );
+      } catch {
+        /* best-effort */
+      }
+    }
   }
 
   async createBooking(
@@ -413,7 +519,16 @@ export class AspirantsService {
       location,
       googleMapsLink,
     });
-    return this.visitRepo.save(visit);
+    const saved = await this.visitRepo.save(visit);
+    try {
+      const ctx = await this.resolveConstituencyContext(aspirant);
+      if (ctx) {
+        await this.notificationsService.notifyAspirantVisit(aspirant, saved, ctx);
+      }
+    } catch {
+      /* best-effort */
+    }
+    return saved;
   }
 
   async listVisitsForAspirant(aspirantId: number) {
@@ -866,7 +981,19 @@ export class AspirantsService {
       title,
       description,
     } as any);
-    await this.meetingRepo.save(meeting);
+    const saved = (await this.meetingRepo.save(meeting)) as unknown as AspirantMeeting;
+    try {
+      const ctx = await this.resolveConstituencyContext(aspirant);
+      if (ctx) {
+        await this.notificationsService.notifyAspirantMeeting(
+          aspirant,
+          saved,
+          ctx,
+        );
+      }
+    } catch {
+      /* best-effort */
+    }
     return this.repo.findOne({
       where: { id },
       relations: ["ward", "meetings"],
@@ -906,7 +1033,10 @@ export class AspirantsService {
       } as any),
     );
 
-    await this.meetingRepo.save(meetings as any);
+    const saved = (await this.meetingRepo.save(meetings as any)) as unknown as AspirantMeeting[];
+    const meetingsByAspirant = new Map<number, AspirantMeeting>();
+    for (const m of saved) meetingsByAspirant.set(m.aspirantId, m);
+    await this.dispatchMeetingNotifications(aspirantIds, meetingsByAspirant);
 
     // Return updated aspirants with their meetings
     return this.repo.find({
@@ -964,12 +1094,23 @@ export class AspirantsService {
     const aspirant = await this.repo.findOne({ where: { userId } });
     if (!aspirant)
       throw new NotFoundException("No aspirant profile found for this user");
-    // Check if voting is currently allowed via VotesService
+
+    // Only block withdrawal if there's an active voting window for THIS
+    // aspirant's election type. A lok_sabha aspirant should still be
+    // able to withdraw while a municipal_corporation window is open
+    // (and vice versa).
     const votingAllowed = await this.votesService.isVotingAllowed();
     if (votingAllowed) {
-      throw new BadRequestException(
-        "Cannot withdraw candidacy while voting is allowed",
-      );
+      const activeWindow = await this.votesService.getActiveVotingWindow();
+      if (
+        activeWindow?.electionId &&
+        aspirant.electionId &&
+        activeWindow.electionId === aspirant.electionId
+      ) {
+        throw new BadRequestException(
+          "Cannot withdraw candidacy while voting is open for this election",
+        );
+      }
     }
 
     await this.repo.update(aspirant.id, {
