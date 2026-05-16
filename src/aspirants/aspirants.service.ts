@@ -347,7 +347,8 @@ export class AspirantsService {
         const updated = await this.repo.findOne({ where: { id: existing.id } });
         if (updated) {
           await this.syncUserSavedConstituency(updated);
-          await this.dispatchNewAspirantNotification(updated);
+          // No new-aspirant notification yet — that fires when documents
+          // complete (sop + selfie uploaded), in MediaService.
         }
         return { ...updated, documentStatus: updated!.getDocumentStatus() };
       }
@@ -375,7 +376,9 @@ export class AspirantsService {
     }
 
     await this.syncUserSavedConstituency(aspirant);
-    await this.dispatchNewAspirantNotification(aspirant);
+    // No new-aspirant notification at registration — it fires when the
+    // aspirant first completes their required documents
+    // (hasAllRequiredDocuments → true), dispatched from MediaService.
 
     // Include documentStatus in response
     return {
@@ -384,13 +387,18 @@ export class AspirantsService {
     };
   }
 
-  private async dispatchNewAspirantNotification(aspirant: Aspirant) {
+  /**
+   * Public entry point — call this from MediaService once an aspirant has
+   * uploaded the required documents (sop + selfie). Best-effort: failures
+   * here must never block the upload flow.
+   */
+  async dispatchNewAspirantNotification(aspirant: Aspirant) {
     try {
       const ctx = await this.resolveConstituencyContext(aspirant);
       if (!ctx) return;
       await this.notificationsService.notifyNewAspirant(aspirant, ctx);
     } catch {
-      // Best-effort: notification failures must not break aspirant flows.
+      /* best-effort */
     }
   }
 
