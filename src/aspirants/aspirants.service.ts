@@ -307,6 +307,14 @@ export class AspirantsService {
       constituencyId: dto.constituencyId,
       wardId,
       userId: undefined as number | undefined,
+      sopAgreed: dto.sopAgreed === true,
+      sopAgreedAt: (dto.sopAgreed === true ? new Date() : null) as Date | null,
+      // SOP file path is deprecated — mark the legacy status as verified
+      // when agreement is given so admin views don't show "pending".
+      sopStatus: (dto.sopAgreed === true ? "verified" : "pending") as
+        | "pending"
+        | "verified"
+        | "rejected",
     };
 
     // Validate phone uniqueness before any writes
@@ -737,7 +745,7 @@ export class AspirantsService {
       .where("aspirant.electionId = :electionId", { electionId })
       .andWhere("aspirant.constituencyId = :constituencyId", { constituencyId })
       .andWhere("aspirant.isActive = :isActive", { isActive: true })
-      .andWhere("aspirant.sopUrl IS NOT NULL")
+      .andWhere("aspirant.sopAgreed = :sopAgreed", { sopAgreed: true })
       .andWhere("aspirant.selfieUrl IS NOT NULL")
       .orderBy("aspirant.createdAt", "DESC")
       .getMany();
@@ -1124,6 +1132,8 @@ export class AspirantsService {
     await this.repo.update(aspirant.id, {
       isActive: false,
       sopUrl: null as any,
+      sopAgreed: false,
+      sopAgreedAt: null,
       selfieUrl: null as any,
       phone: null as any,
     });
@@ -1233,7 +1243,7 @@ export class AspirantsService {
       .createQueryBuilder("aspirant")
       .leftJoinAndSelect("aspirant.user", "user")
       .where("aspirant.isActive = :isActive", { isActive: true })
-      .andWhere("aspirant.sopUrl IS NOT NULL")
+      .andWhere("aspirant.sopAgreed = :sopAgreed", { sopAgreed: true })
       .andWhere("aspirant.selfieUrl IS NOT NULL");
 
     if (search) {
