@@ -21,6 +21,7 @@ import { CurrentUser } from "../common/decorators/current-user.decorator";
 import { Public } from "../common/decorators/public.decorator";
 import { Roles } from "../common/decorators/roles.decorator";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { OptionalJwtAuthGuard } from "../common/guards/optional-jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { AspirantsService } from "./aspirants.service";
 import { CreateAspirantDto } from "./dto/create-aspirant.dto";
@@ -153,7 +154,13 @@ export class AspirantsController {
 
   @Get(":id")
   @Public()
-  @ApiOperation({ summary: "Get aspirant details by id" })
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: "Get aspirant details by id",
+    description:
+      "Public. If a valid token is supplied and the caller is the aspirant owner, their private contact details (phone/whatsapp) are included regardless of the allow* flags.",
+  })
   @ApiParam({
     name: "id",
     type: "number",

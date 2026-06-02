@@ -818,7 +818,7 @@ export class AspirantsService {
     return aspirants.map((aspirant) => {
       const { user, ...rest } = aspirant as any;
       const voteCount = voteCounts[aspirant.id] ?? 0;
-      return {
+      return this.applyContactPrivacy({
         ...rest,
         email: user?.email ?? null,
         voteCount,
@@ -853,7 +853,7 @@ export class AspirantsService {
             return meetingData;
           }),
         documentStatus: aspirant.getDocumentStatus(),
-      };
+      });
     });
   }
 
@@ -964,7 +964,7 @@ export class AspirantsService {
     }
 
     const { user: _user, ...aspirantRest } = aspirant as any;
-    return {
+    const result = {
       ...aspirantRest,
       isBlocked: aspirant.user?.isBlocked ?? false,
       electionName,
@@ -974,6 +974,15 @@ export class AspirantsService {
       overallRating: overallRatings[id] ?? this.emptyRating(),
       documentStatus: aspirant.getDocumentStatus(),
     };
+
+    // The owner viewing their own profile always sees their full contact
+    // details (the FE profile screen relies on this); everyone else gets the
+    // privacy filter applied per the allow* flags.
+    const isOwner =
+      currentUser?.id != null &&
+      aspirant.userId != null &&
+      currentUser.id === aspirant.userId;
+    return isOwner ? result : this.applyContactPrivacy(result);
   }
 
   async setMeetingLink(
@@ -1306,6 +1315,21 @@ export class AspirantsService {
     }));
 
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  /**
+   * Privacy filter for outgoing aspirant responses. An aspirant controls who
+   * can see their contact details via the allow* flags: the phone number is
+   * only included when allowPhone is true, and the WhatsApp number only when
+   * allowWhatsapp is true. When a flag is false the corresponding field is
+   * removed entirely so the value never leaves the server. The allow* flags
+   * themselves are preserved so the client knows which contact actions to show.
+   */
+  private applyContactPrivacy<T extends Record<string, any>>(aspirant: T): T {
+    if (!aspirant) return aspirant;
+    if (aspirant.allowPhone === false) delete (aspirant as any).phone;
+    if (aspirant.allowWhatsapp === false) delete (aspirant as any).whatsappNumber;
+    return aspirant;
   }
 
   private emptyDistribution(): Record<number, number> {
