@@ -30,8 +30,6 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 import { UpdateConstituenciesDto } from "./dto/update-constituencies.dto";
 import { TrackInteractionDto } from "./dto/track-interaction.dto";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
-import { RolesGuard } from "../common/guards/roles.guard";
-import { Roles } from "../common/decorators/roles.decorator";
 
 @ApiTags("Users")
 @Controller("users")
@@ -39,10 +37,9 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get("voters")
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles("admin")
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get all voters with pagination (admin only)" })
+  @ApiOperation({ summary: "Get all voters with pagination" })
   @ApiQuery({
     name: "page",
     required: false,
