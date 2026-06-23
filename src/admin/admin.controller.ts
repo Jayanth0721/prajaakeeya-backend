@@ -19,6 +19,8 @@ import {
   ApiQuery,
 } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../common/guards/jwt-auth.guard";
+import { RolesGuard } from "../common/guards/roles.guard";
+import { Roles } from "../common/decorators/roles.decorator";
 import { AdminService } from "./admin.service";
 import { UpdateReportStatusDto } from "../users/dto/update-report-status.dto";
 import { UpdateUserDto } from "../users/dto/update-user.dto";
@@ -35,7 +37,8 @@ import { CreateGramaPanchayatDto } from "../grama-panchayat/dto/create-grama-pan
 
 @ApiTags("Admin")
 @Controller("admin")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles("admin")
 @ApiBearerAuth()
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -137,15 +140,15 @@ export class AdminController {
     return this.adminService.updateUser(+id, dto);
   }
 
-  @Patch("users/:id/block")
-  @ApiOperation({ summary: "Block a user" })
-  @ApiParam({ name: "id", type: "number", description: "User ID" })
-  @ApiResponse({ status: 200, description: "User blocked successfully" })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  blockUser(@Param("id") id: string) {
-    return this.adminService.blockUser(+id);
-  }
+  // @Patch("users/:id/block")
+  // @ApiOperation({ summary: "Block a user" })
+  // @ApiParam({ name: "id", type: "number", description: "User ID" })
+  // @ApiResponse({ status: 200, description: "User blocked successfully" })
+  // @ApiResponse({ status: 404, description: "User not found" })
+  // @ApiResponse({ status: 401, description: "Unauthorized" })
+  // blockUser(@Param("id") id: string) {
+  //   return this.adminService.blockUser(+id);
+  // }
 
   @Patch("users/:id/unblock")
   @ApiOperation({ summary: "Unblock a user" })
@@ -157,15 +160,15 @@ export class AdminController {
     return this.adminService.unblockUser(+id);
   }
 
-  @Delete("users/:id")
-  @ApiOperation({ summary: "Delete a user" })
-  @ApiParam({ name: "id", type: "number", description: "User ID" })
-  @ApiResponse({ status: 200, description: "User deleted successfully" })
-  @ApiResponse({ status: 404, description: "User not found" })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  deleteUser(@Param("id") id: string) {
-    return this.adminService.deleteUser(+id);
-  }
+  // @Delete("users/:id")
+  // @ApiOperation({ summary: "Delete a user" })
+  // @ApiParam({ name: "id", type: "number", description: "User ID" })
+  // @ApiResponse({ status: 200, description: "User deleted successfully" })
+  // @ApiResponse({ status: 404, description: "User not found" })
+  // @ApiResponse({ status: 401, description: "Unauthorized" })
+  // deleteUser(@Param("id") id: string) {
+  //   return this.adminService.deleteUser(+id);
+  // }
 
   @Get("wards/:wardId/users")
   @ApiOperation({ summary: "Get all users in a specific ward" })
@@ -223,25 +226,6 @@ export class AdminController {
     );
   }
 
-  @Get("voter-counts")
-  @ApiOperation({
-    summary: "Get voter counts for all wards or specific ward numbers",
-  })
-  @ApiQuery({
-    name: "wardNumbers",
-    required: false,
-    type: "string",
-    description: "Comma-separated ward numbers e.g. W-94,W-95",
-  })
-  @ApiResponse({
-    status: 200,
-    description: "Voter counts returned successfully",
-  })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  getVoterCounts(@Query("wardNumbers") wardNumbers?: string) {
-    return this.adminService.getVoterCounts(wardNumbers);
-  }
-
   @Get("meetings/:id")
   @ApiOperation({ summary: "Get a specific meeting by ID" })
   @ApiParam({ name: "id", type: "number", description: "Meeting ID" })
@@ -262,15 +246,15 @@ export class AdminController {
     return this.adminService.updateMeeting(+id, dto);
   }
 
-  @Delete("meetings/:id")
-  @ApiOperation({ summary: "Delete a ward meeting" })
-  @ApiParam({ name: "id", type: "number", description: "Meeting ID" })
-  @ApiResponse({ status: 200, description: "Meeting deleted successfully" })
-  @ApiResponse({ status: 404, description: "Meeting not found" })
-  @ApiResponse({ status: 401, description: "Unauthorized" })
-  deleteMeeting(@Param("id") id: string) {
-    return this.adminService.deleteMeeting(+id);
-  }
+  // @Delete("meetings/:id")
+  // @ApiOperation({ summary: "Delete a ward meeting" })
+  // @ApiParam({ name: "id", type: "number", description: "Meeting ID" })
+  // @ApiResponse({ status: 200, description: "Meeting deleted successfully" })
+  // @ApiResponse({ status: 404, description: "Meeting not found" })
+  // @ApiResponse({ status: 401, description: "Unauthorized" })
+  // deleteMeeting(@Param("id") id: string) {
+  //   return this.adminService.deleteMeeting(+id);
+  // }
 
   // Election Management
   @Post("elections")
@@ -289,14 +273,14 @@ export class AdminController {
     return this.adminService.updateElection(+id, dto);
   }
 
-  @Delete("elections/:id")
-  @ApiOperation({ summary: "Delete an election" })
-  @ApiParam({ name: "id", type: "number" })
-  @ApiResponse({ status: 200, description: "Election deleted" })
-  @ApiResponse({ status: 404, description: "Election not found" })
-  deleteElection(@Param("id") id: string) {
-    return this.adminService.deleteElection(+id);
-  }
+  // @Delete("elections/:id")
+  // @ApiOperation({ summary: "Delete an election" })
+  // @ApiParam({ name: "id", type: "number" })
+  // @ApiResponse({ status: 200, description: "Election deleted" })
+  // @ApiResponse({ status: 404, description: "Election not found" })
+  // deleteElection(@Param("id") id: string) {
+  //   return this.adminService.deleteElection(+id);
+  // }
 
   // Parliamentary Constituency Management
   @Post("parliamentary")
@@ -324,14 +308,14 @@ export class AdminController {
     return this.adminService.updateParliamentary(+id, dto);
   }
 
-  @Delete("parliamentary/:id")
-  @ApiOperation({ summary: "Delete a parliamentary constituency" })
-  @ApiParam({ name: "id", type: "number" })
-  @ApiResponse({ status: 200, description: "Deleted" })
-  @ApiResponse({ status: 404, description: "Not found" })
-  deleteParliamentary(@Param("id") id: string) {
-    return this.adminService.deleteParliamentary(+id);
-  }
+  // @Delete("parliamentary/:id")
+  // @ApiOperation({ summary: "Delete a parliamentary constituency" })
+  // @ApiParam({ name: "id", type: "number" })
+  // @ApiResponse({ status: 200, description: "Deleted" })
+  // @ApiResponse({ status: 404, description: "Not found" })
+  // deleteParliamentary(@Param("id") id: string) {
+  //   return this.adminService.deleteParliamentary(+id);
+  // }
 
   // Assembly Constituency Management
   @Post("assembly")
@@ -350,14 +334,14 @@ export class AdminController {
     return this.adminService.updateAssembly(+id, dto);
   }
 
-  @Delete("assembly/:id")
-  @ApiOperation({ summary: "Delete an assembly constituency" })
-  @ApiParam({ name: "id", type: "number" })
-  @ApiResponse({ status: 200, description: "Deleted" })
-  @ApiResponse({ status: 404, description: "Not found" })
-  deleteAssembly(@Param("id") id: string) {
-    return this.adminService.deleteAssembly(+id);
-  }
+  // @Delete("assembly/:id")
+  // @ApiOperation({ summary: "Delete an assembly constituency" })
+  // @ApiParam({ name: "id", type: "number" })
+  // @ApiResponse({ status: 200, description: "Deleted" })
+  // @ApiResponse({ status: 404, description: "Not found" })
+  // deleteAssembly(@Param("id") id: string) {
+  //   return this.adminService.deleteAssembly(+id);
+  // }
 
   // Municipality / City Corporation Management
   @Get("municipalities")
@@ -393,14 +377,14 @@ export class AdminController {
     return this.adminService.updateMunicipality(+id, dto);
   }
 
-  @Delete("municipalities/:id")
-  @ApiOperation({ summary: "Delete a municipality" })
-  @ApiParam({ name: "id", type: "number" })
-  @ApiResponse({ status: 200, description: "Deleted" })
-  @ApiResponse({ status: 404, description: "Not found" })
-  deleteMunicipality(@Param("id") id: string) {
-    return this.adminService.deleteMunicipality(+id);
-  }
+  // @Delete("municipalities/:id")
+  // @ApiOperation({ summary: "Delete a municipality" })
+  // @ApiParam({ name: "id", type: "number" })
+  // @ApiResponse({ status: 200, description: "Deleted" })
+  // @ApiResponse({ status: 404, description: "Not found" })
+  // deleteMunicipality(@Param("id") id: string) {
+  //   return this.adminService.deleteMunicipality(+id);
+  // }
 
   // Ward Management
   @Post("wards")
@@ -419,14 +403,14 @@ export class AdminController {
     return this.adminService.updateWard(+id, dto);
   }
 
-  @Delete("wards/:id")
-  @ApiOperation({ summary: "Delete a ward" })
-  @ApiParam({ name: "id", type: "number" })
-  @ApiResponse({ status: 200, description: "Ward deleted" })
-  @ApiResponse({ status: 404, description: "Not found" })
-  deleteWard(@Param("id") id: string) {
-    return this.adminService.deleteWard(+id);
-  }
+  // @Delete("wards/:id")
+  // @ApiOperation({ summary: "Delete a ward" })
+  // @ApiParam({ name: "id", type: "number" })
+  // @ApiResponse({ status: 200, description: "Ward deleted" })
+  // @ApiResponse({ status: 404, description: "Not found" })
+  // deleteWard(@Param("id") id: string) {
+  //   return this.adminService.deleteWard(+id);
+  // }
 
   // Grama Panchayat Management
   @Post("grama-panchayat")
@@ -448,14 +432,14 @@ export class AdminController {
     return this.adminService.updateGramaPanchayat(+id, dto);
   }
 
-  @Delete("grama-panchayat/:id")
-  @ApiOperation({ summary: "Delete a grama panchayat village entry" })
-  @ApiParam({ name: "id", type: "number", description: "Sr.No of the village" })
-  @ApiResponse({ status: 200, description: "Village deleted" })
-  @ApiResponse({ status: 404, description: "Not found" })
-  deleteGramaPanchayat(@Param("id") id: string) {
-    return this.adminService.deleteGramaPanchayat(+id);
-  }
+  // @Delete("grama-panchayat/:id")
+  // @ApiOperation({ summary: "Delete a grama panchayat village entry" })
+  // @ApiParam({ name: "id", type: "number", description: "Sr.No of the village" })
+  // @ApiResponse({ status: 200, description: "Village deleted" })
+  // @ApiResponse({ status: 404, description: "Not found" })
+  // deleteGramaPanchayat(@Param("id") id: string) {
+  //   return this.adminService.deleteGramaPanchayat(+id);
+  // }
 
   // Voting Window Management
   @Post("voting-window")

@@ -37,6 +37,8 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get("voters")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: "Get all voters with pagination" })
   @ApiQuery({
     name: "page",
