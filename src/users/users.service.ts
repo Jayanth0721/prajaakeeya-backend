@@ -462,7 +462,7 @@ export class UsersService {
   async getUserById(id: number): Promise<User> {
     const user = await this.repo.findOne({
       where: { id },
-      relations: ["ward"],
+      relations: { ward: true },
     });
 
     if (!user) {
@@ -643,7 +643,7 @@ export class UsersService {
     if (page === undefined && limit === undefined) {
       return this.repo.find({
         where: { wardId },
-        relations: ["ward"],
+        relations: { ward: true },
         order: { createdAt: "DESC" },
       });
     }
@@ -652,7 +652,7 @@ export class UsersService {
     const safePage = Math.max(page ?? 1, 1);
     const [data, total] = await this.repo.findAndCount({
       where: { wardId },
-      relations: ["ward"],
+      relations: { ward: true },
       order: { createdAt: "DESC" },
       skip: (safePage - 1) * safeLimit,
       take: safeLimit,
