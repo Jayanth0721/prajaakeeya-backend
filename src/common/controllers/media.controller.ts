@@ -27,6 +27,7 @@ import {
 import { JwtAuthGuard } from "../guards/jwt-auth.guard";
 import { RolesGuard } from "../guards/roles.guard";
 import { Roles } from "../decorators/roles.decorator";
+import { CurrentUser } from "../decorators/current-user.decorator";
 import { MediaService } from "../services/media.service";
 import {
   UploadAspirantDocumentDto,
@@ -43,7 +44,8 @@ export class MediaController {
   constructor(private readonly mediaService: MediaService) {}
 
   @Get("presign")
-  @ApiOperation({ summary: "Get presigned URL for private S3 object" })
+  @Roles("admin")
+  @ApiOperation({ summary: "Get presigned URL for private S3 object (admin only)" })
   @ApiQuery({
     name: "key",
     description: "S3 object key (e.g. profiles/20/file.jpg)",
@@ -144,6 +146,7 @@ export class MediaController {
   @ApiResponse({ status: 200, description: "Document uploaded successfully" })
   @ApiResponse({ status: 404, description: "Aspirant not found" })
   async uploadAspirantDocument(
+    @CurrentUser() user: any,
     @Param("aspirantId", ParseIntPipe) aspirantId: number,
     @Body() dto: UploadAspirantDocumentDto,
     @UploadedFile() file: Express.Multer.File,
@@ -152,6 +155,7 @@ export class MediaController {
       aspirantId,
       dto.documentType,
       file,
+      user,
     );
   }
 
